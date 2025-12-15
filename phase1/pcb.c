@@ -6,12 +6,12 @@ static int next_pid = 1;
 
 void initPcbs()
 {
-  pcbFree_h = LIST_HEAD_INIT(pcbFree_h);
+  INIT_LIST_HEAD(pcbFree_h);
 
     struct list_head *pos;
-    list_for_each(pos, &pcbFree_h)
+    list_for_each_entry(pos, pcbFree_table,p_list)
     {
-      kitem_t *item=container_of(pos, kitem_t, list);
+      struct list_head *item=container_of(pos,struct list_head,next);
       list_add(pos,pcbFree_h);
     }
 }
@@ -38,8 +38,7 @@ pcb_t* allocPcb()
     struct list_head *pos;
     list_for_each(pos, &pcbFree_h)
     {
-      kitem_t *item=container_of(pos,kitem_t,pcbFree_h);
-      printf("Elemento i-esimo %d\n",item->elem);
+      struct list_head* item=container_of(pos,struct list_head,list_head->next);
     }
 
     list_del(pos);
@@ -49,7 +48,7 @@ pcb_t* allocPcb()
 
 void mkEmptyProcQ(struct list_head* head)
 {
-  head=&LIST_HEAD_INIT(process_queue);
+  head=LIST_HEAD_INIT(process_queue);
 }
 
 int emptyProcQ(struct list_head* head)
