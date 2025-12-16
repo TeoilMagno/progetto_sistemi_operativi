@@ -6,49 +6,51 @@ static int next_pid = 1;
 
 void initPcbs()
 {
-  INIT_LIST_HEAD(pcbFree_h);
+  INIT_LIST_HEAD(&pcbFree_h);
 
-    struct list_head *pos;
-    list_for_each_entry(pos, pcbFree_table,p_list)
-    {
-      struct list_head *item=container_of(pos,struct list_head,next);
-      list_add(pos,pcbFree_h);
-    }
+  for(int c=0; c<MAXPROC; c++)
+  {
+    list_add(&(pcbFree_table[c].p_list), &pcbFree_h);
+  }
 }
 
 void freePcb(pcb_t* p)
 {
-  list_add(p->p_list, pcbFree_h);
+  list_add(&p->p_list, &pcbFree_h);
 }
 
 pcb_t* allocPcb()
 {
-  if(list_empty(pcbFree_h))
+  if(list_empty(&pcbFree_h))
     return NULL;
   else
   {
-    /*
-     * da finire, non capisco cosa si intenda con
-     * "provide initial values for all of the PCBs fields"
-    */
-    
-    //penso si debbano usare le funzioni list_for_each() o list_for_each_entry()
-    //a seguire list_del()
-    
-    struct list_head *pos;
-    list_for_each(pos, &pcbFree_h)
-    {
-      struct list_head* item=container_of(pos,struct list_head,list_head->next);
-    }
+    struct list_head *entry=pcbFree_h.next;
 
-    list_del(pos);
-    return pos;
+    list_del(entry);
+    pcb_t *p=container_of(entry, pcb_t, p_list);
+
+    p->p_pid=next_pid++;
+    p->p_parent=NULL;
+
+    INIT_LIST_HEAD(&p->p_child);
+    INIT_LIST_HEAD(&p->p_sib);
+
+    p->p_time=0;
+    p->p_semAdd=NULL;
+    p->p_supportStruct=NULL;
+    p->p_prio=0;
+
+    //todo: inizializzare i valori di p_s, non so quali siano i valori corretti
+    // memset(&p->p_s, 0, sizeof(state_t));
+
+    return p;
   }
 }
 
 void mkEmptyProcQ(struct list_head* head)
 {
-  head=LIST_HEAD_INIT(process_queue);
+  INIT_LIST_HEAD(head);
 }
 
 int emptyProcQ(struct list_head* head)
