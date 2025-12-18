@@ -1,14 +1,28 @@
 Questo è il REPO per il progetto di sistemi operativi dell'anno scolastico 2025/2026
-lo starter kit è già stato buildato
-Nota: per la fase 1 dobbiamo implementari alcuni metodi e alcune strutture, ma nella cartella /header
-abbiamo già a dispozione alcuni metodi da utilizzare, forniti dai docenti
 
-se qualcuno avesse problemi lascio le istruzioni per il build dello starter kit di seguito
+!! Questa cartella non contiene tutti i file che servono al corretto funzionamento del progetto:
+1)  Il codice implementato va testato con uriscv di seguito la REPO per installarlo
+    https://github.com/virtualsquare/uriscv/
+2)  questa cartella non contiene il file CmakeList.txt in quanto al variare della distro
+    utlizzata variano anche le directory di installazione di uriscv con annesse librerie
 
-# MultiPandOS
+!! per il corretto funzionamento bisogna recarsi a https://www.cs.unibo.it/~renzo/so/PandOSsh/ !!
 
-To compile the project:
+scaricare starterkit.tar.gz
+```bash
+tar -xfv starterkit.tar.gz
+```
+
+modificare il file CmakeList.txt a seconda delle directory in cui è installato uriscv
+e copiare il file nella directory di lavoro, infine eseguire:
 ```bash
 cmake -B build
+```
+
+dopo aver implementato tutte le varie funzioni si può provare a compilare tutto il progetto con:
+```bash
 cmake --build build
 ```
+
+Nota: per la fase 1 dobbiamo implementari alcuni metodi e alcune strutture, ma nella cartella /header
+abbiamo già a dispozione alcuni metodi da utilizzare, forniti dai docenti
