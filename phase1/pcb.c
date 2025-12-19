@@ -90,10 +90,26 @@ pcb_t* headProcQ(struct list_head* head)
 
 pcb_t* removeProcQ(struct list_head* head)
 {
+  if(list_empty(head)){return NULL;}
+  struct list_head *entry=head->next;
+  list_del(entry);
+  pcb_t *p=container_of(entry, pcb_t, p_list);
+  return p;
 }
 
 pcb_t* outProcQ(struct list_head* head, pcb_t* p)
 {
+  struct list_head* iter;
+  list_for_each(iter, head)
+  {
+    pcb_t* item = container_of(iter, pcb_t, p_list);
+    if (item==p)
+    {
+      list_del(iter);
+      return p;
+    }
+  }
+  return NULL;
 }
 
 int emptyChild(pcb_t* p)
