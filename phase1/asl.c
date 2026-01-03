@@ -55,9 +55,31 @@ int insertBlocked(int* semAdd, pcb_t* p)
   }
 }
 
-
 pcb_t* removeBlocked(int* semAdd)
 {
+  struct list_head *iter;
+
+  list_for_each(iter, &semd_h)
+  {
+    semd_t *item=container_of(iter, semd_t, s_link);
+    if(*(item->s_key)==*semAdd)
+    {
+      struct list_head *free=(&item->s_procq);
+      list_del(free);
+
+      if(list_empty(&item->s_procq))
+      {
+        list_del(iter);
+        list_add(iter, &semdFree_h);
+      }
+
+      pcb_t *p=container_of(free,pcb_t,p_list);
+
+      return p;
+    }
+
+    return NULL;
+  }
 }
 
 pcb_t* outBlocked(pcb_t* p)
