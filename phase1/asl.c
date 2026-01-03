@@ -1,4 +1,5 @@
 #include "./headers/asl.h"
+#include "./headers/pcb.h"
 
 static semd_t semd_table[MAXPROC];
 static struct list_head semdFree_h;
@@ -20,41 +21,29 @@ void initASL()
 int insertBlocked(int* semAdd, pcb_t* p)
 {
   struct list_head *iter;
-  int found=0;
-
   list_for_each(iter, &semd_h)
   {
     semd_t *item=container_of(iter, semd_t, s_link);
-    if(*(item->s_key)==*semAdd)
+    if(item->s_key==semAdd)
     {
       list_add_tail(&p->p_list, &item->s_procq);
-      *(p->p_semAdd)=*semAdd;
-      found=1;
+      p->p_semAdd=semAdd;
       return 0;
     }
   }
+  if(list_empty(&semdFree_h)){return 1;}
+  
+  struct list_head *entry=semdFree_h.next;
+  list_del(entry);
 
-  if(found==0)
-  {
-    if(list_empty(&semdFree_h))
-      return 1;
-    else
-    {
-      struct list_head *entry=semdFree_h.next;
-      list_del(entry);
-
-      semd_t descriptor;
-      descriptor.s_link=*entry;
-      INIT_LIST_HEAD(&descriptor.s_procq);
-      entry=NULL;
-
-      descriptor.s_key=semAdd;
-      list_add(&(descriptor.s_link), &semd_h);
-      list_add_tail(&p->p_list, &descriptor.s_procq);
-      *(p->p_semAdd)=*semAdd;
-      return 0;
-    }
-  }
+  semd_t *descriptor = container_of(entry, semd_t, s_link);
+  INIT_LIST_HEAD(&descriptor->s_procq);
+  descriptor->s_key=semAdd;
+  list_add(&descriptor->s_link, &semd_h);
+  list_add_tail(&p->p_list, &descriptor->s_procq);
+  p->p_semAdd=semAdd;
+  
+  return 0;
 }
 
 pcb_t* removeBlocked(int* semAdd)
@@ -65,15 +54,14 @@ pcb_t* removeBlocked(int* semAdd)
    * se semd_h risulta vuota allora non eiste un semaforo contenente con s_key==semAdd
    * tale che esso contenga un processo da rimuovere da s_procq
   */
-  if(list_empty(&semd_h))
-    return NULL;
+  if(list_empty(&semd_h)){return NULL;}
 
   struct list_head *iter;
 
   list_for_each(iter, &semd_h)
   {
     semd_t *item=container_of(iter, semd_t, s_link);
-    if(*(item->s_key)==*semAdd)
+    if(item->s_key==semAdd)
     {
       pcb_t *p=removeProcQ(&item->s_procq);
 
@@ -85,9 +73,8 @@ pcb_t* removeBlocked(int* semAdd)
 
       return p;
     }
-
-    return NULL;
   }
+  return NULL;
 }
 
 pcb_t* outBlocked(pcb_t* p)
@@ -97,8 +84,7 @@ pcb_t* outBlocked(pcb_t* p)
    * processo nella s_procq
    * se semd_h risulta vuota allora non eiste un semaforo contenente p in s_procq
   */
-  if(list_empty(&semd_h))
-    return NULL;
+  if(list_empty(&semd_h)){return NULL;}
 
   struct list_head *iter;
 
@@ -107,13 +93,12 @@ pcb_t* outBlocked(pcb_t* p)
   list_for_each(iter, &semd_h)
   {
     semd_t *item=container_of(iter, semd_t, s_link);
-    if(*(item->s_key)==*(p->p_semAdd))
+    if(item->s_key==p->p_semAdd)
     {
       return outProcQ(&item->s_procq, p);
     }
-
-    return NULL;
   }
+  return NULL;
 }
 
 pcb_t* headBlocked(int* semAdd)
@@ -124,7 +109,7 @@ pcb_t* headBlocked(int* semAdd)
   {
     semd_t *item=container_of(iter, semd_t, s_link);
 
-    if(*(item->s_key)==*semAdd)
+    if(item->s_key==semAdd)
     {
       return headProcQ(&item->s_procq);
     }
