@@ -114,16 +114,60 @@ pcb_t* outProcQ(struct list_head* head, pcb_t* p)
 
 int emptyChild(pcb_t* p)
 {
+  if(p->p_child.next == &(p->p_child)){
+    return TRUE;
+  }
+  return FALSE;
 }
 
 void insertChild(pcb_t* prnt, pcb_t* p)
 {
+  if(prnt == NULL || p == NULL){
+    //caso NULL
+    return;
+  }  
+
+  p->p_parent = prnt;
+  struct list_head *sblng = prnt->p_child.next;
+  p->p_sib.next = sblng; 
+  p->p_sib.prev = &(prnt->p_child); 
+  prnt->p_child.next = &(p->p_sib); 
+  sblng->prev = &(p->p_sib); 
 }
 
 pcb_t* removeChild(pcb_t* p)
 {
+  if(p == NULL || emptyChild(p)){
+    return NULL;
+  }
+
+  pcb_t *removed_child = container_of(p->p_child.next, pcb_t, p_sib);
+  struct list_head *prnt = removed_child->p_sib.prev;
+  struct list_head *sblng = removed_child->p_sib.next;
+  prnt->next = sblng;
+  sblng->prev = prnt;
+
+  removed_child->p_parent = NULL;
+  removed_child->p_sib.next = &(removed_child->p_sib);
+  removed_child->p_sib.prev = &(removed_child->p_sib);
+  
+  return removed_child;
 }
 
 pcb_t* outChild(pcb_t* p)
-{
+{ 
+  if(p == NULL || p->p_parent == NULL){ 
+    return NULL;
+  }
+
+  struct list_head *prnt = p->p_sib.prev;
+  struct list_head *sblng = p->p_sib.next;
+  prnt->next = sblng;
+  sblng->prev = prnt;
+
+  p->p_parent = NULL;
+  p->p_sib.next = &(p->p_sib);
+  p->p_sib.prev = &(p->p_sib);
+
+  return p;
 }
