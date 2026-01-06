@@ -147,60 +147,59 @@ pcb_t* outProcQ(struct list_head* head, pcb_t* p)
 
 int emptyChild(pcb_t* p)
 {
+  /*Se p è NULL, non ha figli*/
+  if(p == NULL){
+    return TRUE;
+  }
+  /*Se puntatore next della testa della lista punta alla testa stessa, p non ha figli*/
   if(p->p_child.next == &(p->p_child)){
     return TRUE;
   }
+  /*Se la funzione non è ancora terminata, p ha dei figli*/
   return FALSE;
 }
 
 void insertChild(pcb_t* prnt, pcb_t* p)
 {
+  /*Se uno dei due puntatori è NULL, il programma esce dalla funzione*/
   if(prnt == NULL || p == NULL){
     //caso NULL
     return;
   }  
-
+  /*Il figlio p è collegato al genitore prnt tramite il puntatore*/
   p->p_parent = prnt;
-  struct list_head *sblng = prnt->p_child.next;
-  p->p_sib.next = sblng; 
-  p->p_sib.prev = &(prnt->p_child); 
-  prnt->p_child.next = &(p->p_sib); 
-  sblng->prev = &(p->p_sib); 
+  /*Utilizza list_add per inserire il figlio p in testa alla lista dei figli del genitore prnt*/
+  list_add(&(p->p_sib), &(prnt->p_child));
 }
 
 pcb_t* removeChild(pcb_t* p)
 {
+  /*Se il puntatore è NULL o il puntatore non ha figli, il programma esce dalla funzione*/
   if(p == NULL || emptyChild(p)){
     return NULL;
   }
-
+  /*Ottiene un puntatore che punta al figlio in testa alla lista dei figli di p*/
   pcb_t *removed_child = container_of(p->p_child.next, pcb_t, p_sib);
-  struct list_head *prnt = removed_child->p_sib.prev;
-  struct list_head *sblng = removed_child->p_sib.next;
-  prnt->next = sblng;
-  sblng->prev = prnt;
-
+  /*Collega l'elemento precedente all'elemento successivo di removed_child*/
+  list_del(&(removed_child->p_sib));
+  /*Rimuove il collegamento tra removed_child e il genitore p e alla lista p_sib*/
   removed_child->p_parent = NULL;
-  removed_child->p_sib.next = &(removed_child->p_sib);
-  removed_child->p_sib.prev = &(removed_child->p_sib);
+  INIT_LIST_HEAD(&(removed_child->p_sib));
   
   return removed_child;
 }
 
 pcb_t* outChild(pcb_t* p)
 { 
+  /*Se il puntatore è NULL o il puntatore non ha un genitore, il programma esce dalla funzione*/
   if(p == NULL || p->p_parent == NULL){ 
     return NULL;
   }
-
-  struct list_head *prnt = p->p_sib.prev;
-  struct list_head *sblng = p->p_sib.next;
-  prnt->next = sblng;
-  sblng->prev = prnt;
-
+  /*Collega l'elemento precedente all'elemento successivo di p*/
+  list_del(&(p->p_sib));
+  /*Rimuove il collegamento tra p e il genitore e alla lista p_sib*/
   p->p_parent = NULL;
-  p->p_sib.next = &(p->p_sib);
-  p->p_sib.prev = &(p->p_sib);
+  INIT_LIST_HEAD(&(p->p_sib));
 
   return p;
 }
