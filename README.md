@@ -24,8 +24,9 @@ dopo aver implementato tutte le varie funzioni si può provare a compilare tutto
 cmake --build build
 ```
 
-Nota: per la fase 1 dobbiamo implementari alcuni metodi e alcune strutture, ma nella cartella /header
-abbiamo già a dispozione alcuni metodi da utilizzare, forniti dai docenti
+Nota: per la fase 1 dobbiamo implementari alcuni metodi e alcune strutture, ma
+nel file ./headers/listx.h abbiamo già a dispozione alcuni metodi da utilizzare,
+forniti dai docenti
 
 infine si consiglia di creare una file .gitignore indicando:
 build/

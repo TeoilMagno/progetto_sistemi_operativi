@@ -6,21 +6,33 @@ static int next_pid = 1;
 
 void initPcbs()
 {
+  //initiallizzo pcbFree_h
   INIT_LIST_HEAD(&pcbFree_h);
 
+  /*
+   *aggiungo ogni puntatore p_list dei pcb contenuti in pcbFree_table alla lista
+   dei pcb inattivi
+  */
   for(int c=0; c<MAXPROC; c++)
   {
-    list_add(&(pcbFree_table[c].p_list), &pcbFree_h);
+    list_add(&pcbFree_table[c].p_list, &pcbFree_h);
   }
 }
 
 void freePcb(pcb_t* p)
 {
+  //aggiungo il processo p alla lista dei processi inattivi
   list_add(&p->p_list, &pcbFree_h);
 }
 
 pcb_t* allocPcb()
 {
+  /*
+   * se non ci sono pcb intattivi non posso allocarne uno nuovo
+   * se c'è almeno un pcb inattivo, lo rimuovo dalla lista e lo inizializzo
+   * lo rimuovo dalla lista dei pcb inattivi e ritorno un puntatore ad esso
+  */
+
   if(list_empty(&pcbFree_h))
     return NULL;
   else
@@ -58,11 +70,16 @@ pcb_t* allocPcb()
 
 void mkEmptyProcQ(struct list_head* head)
 {
+  /*
+   * inizializzo semplicemente la variabile head in modo che possa diventare l'elemento sentinel
+   * di una nuova lista
+  */
   INIT_LIST_HEAD(head);
 }
 
 int emptyProcQ(struct list_head* head)
 {
+  //ritorna true se head è una lista vuota, altrimenti ritorna false
   return list_empty(head);
 }
 
