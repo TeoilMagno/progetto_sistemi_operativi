@@ -68,9 +68,14 @@ int emptyProcQ(struct list_head* head)
 
 void insertProcQ(struct list_head* head, pcb_t* p)
 {
+  /*
+   * Esamina la lista cercando un elemento con priorità più bassa.
+   * Se trovato, inserisce il PCB dato prima di quest'ultimo.
+   */
   struct list_head* iter;
   list_for_each(iter, head)
   {
+    /* Recupera il PCB che contiene l'elemento corrente della lista */
     pcb_t* item = container_of(iter, pcb_t, p_list);
     if (item->p_prio < p->p_prio)
     {
@@ -78,27 +83,37 @@ void insertProcQ(struct list_head* head, pcb_t* p)
         return;
     }
   }
+  /* Se non viene trovato alcun elemento con priorità inferiore, aggiunge il PCB in coda */
   list_add_tail(&p->p_list, head);
 }
 
 pcb_t* headProcQ(struct list_head* head)
 {
+  /* Se la lista è vuota, restituisce NULL */
   if(list_empty(head)){return NULL;}
+  /* Altrimenti, restituisce il puntatore al primo PCB */
   pcb_t* p = container_of(head->next, pcb_t, p_list);
   return p;
 }
 
 pcb_t* removeProcQ(struct list_head* head)
 {
+  /* Se la lista è vuota, restituisce NULL */
   if(list_empty(head)){return NULL;}
+  /* Salva un puntatore al primo elemento prima di rimuoverlo */
   struct list_head *entry=head->next;
   list_del(entry);
+  /* Recupera il PCB dell'elemento rimosso */
   pcb_t *p=container_of(entry, pcb_t, p_list);
   return p;
 }
 
 pcb_t* outProcQ(struct list_head* head, pcb_t* p)
 {
+  /*
+   * Scorre la lista alla ricerca di un PCB uguale a quello fornito.
+   * Se lo trova, rimuove l'elemento dalla lista.
+   */
   struct list_head* iter;
   list_for_each(iter, head)
   {
@@ -109,6 +124,7 @@ pcb_t* outProcQ(struct list_head* head, pcb_t* p)
       return p;
     }
   }
+  /* Se non viene trovato, restituisce NULL */
   return NULL;
 }
 
