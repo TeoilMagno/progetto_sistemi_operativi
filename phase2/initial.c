@@ -6,16 +6,8 @@ static struct list_head readyQueue;
 static pcb_t *currentProcess=NULL;
 static semd_t deviceSemaphores[16];
 
-extern void p2test();
-
-// void uTLB_RefillHandler()
-// {
-//   int prid = getPRID();
-//   setENTRYHI(0x80000000);
-//   setENTRYLO(0x00000000);
-//   TLBWR();
-//   LDST((state_t*) BIOSDATAPAGE);
-// }
+extern void test();
+extern void uTLB_RefillHandler();
 
 void exceptionHandler()
 {
@@ -50,7 +42,7 @@ int main()
   //enable Interrupt and Kernel Mode
   p->p_s.status=MSTATUS_MPIE_MASK | MSTATUS_MPP_M;
   RAMTOP(p->p_s.reg_sp);
-  p->p_s.pc_epc=(memaddr)p2test;
+  p->p_s.pc_epc=(memaddr) test;
   p->p_parent=NULL;
   INIT_LIST_HEAD(&p->p_child);
   INIT_LIST_HEAD(&p->p_sib);
