@@ -3,10 +3,6 @@
 extern void test();
 extern void uTLB_RefillHandler();
 
-void exceptionHandler()
-{
-}
-
 int main()
 {
   passupvector_t *puv=(passupvector_t *)PASSUPVECTOR;
