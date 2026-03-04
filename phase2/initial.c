@@ -1,11 +1,5 @@
 #include "./headers/initial.h"
 
-static unsigned int processCount=0;
-static unsigned int softBlockCount=0;
-static struct list_head readyQueue;
-static pcb_t *currentProcess=NULL;
-static semd_t deviceSemaphores[16];
-
 extern void test();
 extern void uTLB_RefillHandler();
 
@@ -49,6 +43,8 @@ int main()
   p->p_time=0;
   p->p_semAdd=NULL;
   p->p_supportStruct=NULL;
+
+  scheduler();
 
   return 0;
 }

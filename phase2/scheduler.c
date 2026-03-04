@@ -1,0 +1,29 @@
+#include "./headers/scheduler.h"
+
+void scheduler()
+{
+  if(list_empty(&readyQueue))
+  {
+    if(processCount==0)
+      HALT();
+    else if(processCount>0 && softBlockCount>0)
+    {
+      //sets the mie register to enable interrupts and either disable the PLT
+      setMIE(MIE_ALL & ~MIE_MTIE_MASK);
+      unsigned int status = getSTATUS();
+      status |= MSTATUS_MIE_MASK;
+      setSTATUS(status);
+      WAIT();
+    }
+    //caso di deadlock
+    else if (processCount>0 && softBlockCount==0)
+      PANIC();
+  }
+  else //se la readyQueue non è vuota
+  {
+    currentProcess->p_list = readyQueue;
+    list_del(&readyQueue);
+    currentProcess->p_time=TIMESLICE;
+    LDST(&currentProcess->p_s);
+  }
+}
