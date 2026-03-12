@@ -169,3 +169,20 @@ pcb_t* headBlocked(int* semAdd)
 
   return NULL;
 }
+
+pcb_t* findBlockedPcb(int pid){
+  struct list_head *iter;
+  list_for_each(iter, &semd_h)
+  {
+    semd_t *item=container_of(iter, semd_t, s_link);
+    list_for_each(iter, &item->s_procq)
+    {
+      pcb_t *item2=container_of(iter, pcb_t, p_list);
+      if(item2->p_pid==pid)
+      {
+        return item2;
+      }
+    }
+  }
+  return NULL;
+}
