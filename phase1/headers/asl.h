@@ -24,4 +24,6 @@ pcb_t* outBlocked(pcb_t* p);
 // Return the first blocked PCB of the semaphore with key "semAdd"
 pcb_t* headBlocked(int* semAdd);
 
+pcb_t* findBlockedPcb(int pid);
+
 #endif
