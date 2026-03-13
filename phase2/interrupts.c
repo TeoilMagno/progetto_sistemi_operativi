@@ -42,7 +42,11 @@ void interrupt()
       //imòossibile
   }
 
-  if(IntlineNo>=3 && IntlineNo<=7)
+
+  if(IntlineNo==7) //interrupt causato da un terminale
+  {}
+
+  if(IntlineNo>=3 && IntlineNo<=6)
   {
     memaddr bitmap = 0x10000040+0x04*(IntlineNo-3);
 
@@ -56,13 +60,20 @@ void interrupt()
     else if(bitmap & DEV7ON) DevNo = 7;
     else DevNo = -1;
 
-    memaddr devAddrBase = 0x10000054+((IntlineNo-3)*0x80)+(DevNo*0x10);
+    memaddr devAddrBase = START_DEVREG+((IntlineNo-3)*0x80)+(DevNo*0x10);
 
     dtpreg_t *devReg = (dtpreg_t *)devAddrBase;
-    unsigned int status = devReg->status;
-    devReg->command=ACK;
+    memaddr stateAddr = devReg->status;
 
-    pcb_t *unblocked = NULL;
+    //probabilemnte sbagliato
+    state_t *state = (state_t *)stateAddr;
+    semd_t *sem = (semd_t *)state->reg_a1;
+    pcb_t *unblocked = headBlocked(sem->s_key);
+
+    devReg->command=ACK;
+    SYSCALL(VERHOGEN, *sem->s_key, 0, 0);
+
+
   }
   
 }
