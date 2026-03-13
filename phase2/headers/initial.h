@@ -13,7 +13,7 @@ extern unsigned int processCount;
 extern unsigned int softBlockCount;
 extern struct list_head readyQueue;
 extern pcb_t *currentProcess;
-extern int deviceSemaphores[SEMDEVLEN];
+extern int deviceSemaphore[SEMDEVLEN];
 
 extern void test();
 extern void uTLB_RefillHandler();

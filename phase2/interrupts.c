@@ -27,7 +27,6 @@ void interruptHandler(state_t *stato)
   //see Table 1: Interrupt Line and Device Class Mapping
   //in specs
   int IntlineNo = 0;
-  int DevNo = 0;
 
   switch(getCAUSE() & CAUSE_EXCCODE_MASK)
   {
@@ -63,43 +62,104 @@ void interruptHandler(state_t *stato)
       //imòossibile
   }
 
-  if(IntlineNo>=3 && IntlineNo<=7)
+  if(IntlineNo==1)
+    handlePLT(stato);
+  else if(IntlineNo>=3 && IntlineNo<=7)
+    handleDevice(IntlineNo, stato);
+}
+
+void handleDevice(int IntlineNo, state_t *stato)
+{
+  unsigned int savedStatus=0;
+  pcb_t *unblocked=NULL;
+  int DevNo = 0;
+  memaddr bitmap = 0x10000040+0x04*(IntlineNo-3);
+  int *sem = NULL;
+
+  if(bitmap & DEV0ON) DevNo = 0;
+  else if(bitmap & DEV1ON) DevNo = 1;
+  else if(bitmap & DEV2ON) DevNo = 2;
+  else if(bitmap & DEV3ON) DevNo = 3;
+  else if(bitmap & DEV4ON) DevNo = 4;
+  else if(bitmap & DEV5ON) DevNo = 5;
+  else if(bitmap & DEV6ON) DevNo = 6;
+  else if(bitmap & DEV7ON) DevNo = 7;
+  else DevNo = -1;
+
+  memaddr devAddr = START_DEVREG+((IntlineNo-3)*0x80)+(DevNo*0x10);
+
+  if(IntlineNo==7) // è un terminale
   {
-    memaddr bitmap = 0x10000040+0x04*(IntlineNo-3);
+    termreg_t *termReg = (termreg_t *)devAddr;
+    unsigned int transStatus = termReg->transm_status;
+    unsigned int recvStatus = termReg->recv_status;
 
-    if(bitmap & DEV0ON) DevNo = 0;
-    else if(bitmap & DEV1ON) DevNo = 1;
-    else if(bitmap & DEV2ON) DevNo = 2;
-    else if(bitmap & DEV3ON) DevNo = 3;
-    else if(bitmap & DEV4ON) DevNo = 4;
-    else if(bitmap & DEV5ON) DevNo = 5;
-    else if(bitmap & DEV6ON) DevNo = 6;
-    else if(bitmap & DEV7ON) DevNo = 7;
-    else DevNo = -1;
-
-    if(IntlineNo==7) // è un terminale
+    if(transStatus==OKCHARTRANS)
     {
+      savedStatus=transStatus;
+      termReg->transm_command = ACK;
+      sem=&deviceSemaphore[findDeviceIndex(devAddr+0xc)]; //0xc == transm_command
+    }
+    if(recvStatus==RECEIVECHAR)
+    {
+      savedStatus=recvStatus;
+      termReg->recv_command = ACK;
+      sem=&deviceSemaphore[findDeviceIndex(devAddr+0x4)]; //0x4 == recv_command
     }
 
-    memaddr devAddrBase = START_DEVREG+((IntlineNo-3)*0x80)+(DevNo*0x10);
-
-    dtpreg_t *devReg = (dtpreg_t *)devAddrBase;
-    memaddr savedStatus = devReg->status;
+    if(sem!=NULL)
+    unblocked=removeBlocked(sem);
+    else //dovrebbe essere impossibile, ma se succede...
+    {
+      (*sem)++;
+    }
+  }
+  else
+  {
+    dtpreg_t *devReg = (dtpreg_t *)devAddr;
+    savedStatus = devReg->status;
     devReg->command=ACK;
 
-    int *sem = &deviceSemaphores[findDeviceIndex(devAddrBase)];
-    pcb_t *unblocked = removeBlocked(sem);
-
-    if(unblocked != NULL)
-    {
-      unblocked->p_s.reg_a1 = savedStatus;
-      list_add(&unblocked->p_list, &readyQueue);
-    }
-
-    if(currentProcess != NULL)
-      LDST(stato);
-    else
-      scheduler();
+    sem = &deviceSemaphore[findDeviceIndex(devAddr)];
+    unblocked = removeBlocked(sem);
   }
-  
+
+  if(unblocked != NULL)
+  {
+    unblocked->p_s.reg_a1 = savedStatus;
+    list_add(&unblocked->p_list, &readyQueue);
+  }
+  else //dovrebbe essere impossibile, ma se succede...
+  {
+    (*sem)++;
+  }
+
+  if(currentProcess != NULL)
+    LDST(stato);
+  else
+    scheduler();
+}
+
+void handlePLT(state_t *stato)
+{
+  setTIMER((memaddr) 5);
+
+  currentProcess->p_s.entry_hi=stato->entry_hi;
+  currentProcess->p_s.cause=stato->cause;
+  currentProcess->p_s.status=stato->status;
+  currentProcess->p_s.pc_epc=stato->pc_epc;
+  currentProcess->p_s.mie=stato->mie;
+
+  for(int c=0;c<STATE_GPR_LEN;c++)
+  {
+    currentProcess->p_s.gpr[c]=stato->gpr[c];
+  }
+
+  list_add(&currentProcess->p_list, &readyQueue);
+  scheduler();
+}
+
+void handleClock(state_t *stato)
+{
+  return;
 }

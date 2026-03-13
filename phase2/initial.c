@@ -4,7 +4,7 @@ unsigned int processCount=0;
 unsigned int softBlockCount=0;
 struct list_head readyQueue;
 pcb_t *currentProcess=NULL;
-int deviceSemaphores[SEMDEVLEN];
+int deviceSemaphore[SEMDEVLEN];
 
 extern void test();
 extern void uTLB_RefillHandler();
@@ -24,7 +24,7 @@ int main()
 
   for(int c=0;c<NRSEMAPHORES;c++)
   {
-    deviceSemaphores[c]=0;
+    deviceSemaphore[c]=0;
   }
 
   //macro to initialize system-wide Interval Timer

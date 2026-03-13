@@ -6,9 +6,14 @@
 #include "../../phase1/headers/asl.h"
 #include "../../phase1/headers/pcb.h"
 #include "./initial.h"
+#include "./scheduler.h"
 #include <uriscv/liburiscv.h>
 #include <uriscv/cpu.h>
 
+int findDeviceIndex(memaddr deviceAddr);
 void interruptHandler(state_t *stato);
+void handleDevice(int IntlineNo, state_t *stato);
+void handlePLT(state_t *stato);
+void handleClock(state_t *stato);
 
 #endif
