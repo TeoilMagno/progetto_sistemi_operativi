@@ -4,10 +4,11 @@ void exceptionHandler()
 {
   unsigned int cause = getCAUSE();
   unsigned int causeCode = cause && CAUSE_EXCCODE_MASK;
+  state_t *state = (state_t *) GET_EXCEPTION_STATE_PTR(getPRID());
 
   if(CAUSE_IS_INT(cause))
   {
-    //interruptHandler();
+    interruptHandler(state);
   }
   else
   {
@@ -81,9 +82,8 @@ void killProcess(pcb_t* pcb)
   freePcb(pcb);
 }
 
-void syscallHandler()
+void syscallHandler(state_t *state)
 {
-  state_t *state = (state_t *) GET_EXCEPTION_STATE_PTR(getPRID());
   switch(state->reg_a0)
   { 
     case -1:

@@ -1,6 +1,27 @@
 #include"./headers/interrupts.h"
 
-void interrupt()
+int findDeviceIndex(memaddr deviceAddr)
+{
+  //0x10 equivale alla dimensione in memoria che occupa ogni device
+  unsigned int bottom = (unsigned int)deviceAddr - START_DEVREG;
+
+  //-1 in caso di errore
+  int deviceIndex = -1;
+
+  //controllo se il device è un terminale, in caso ogni terminale è suddiviso in due subdevice
+  //ognuno che occupa 0x8
+  if(bottom >= 32*0x10)
+    deviceIndex = 32 + (bottom-(32*0x10)/0x8);
+  else //non è un terminale
+    deviceIndex = bottom/0x10;
+
+  if(deviceIndex<0 || deviceIndex>49)
+    return -1; //errore dispositivo non valido
+  
+  return deviceIndex;
+}
+
+void interruptHandler(state_t *stato)
 {
   //calculates Interrupt Exception Code
   //see Table 1: Interrupt Line and Device Class Mapping
@@ -42,11 +63,7 @@ void interrupt()
       //imòossibile
   }
 
-
-  if(IntlineNo==7) //interrupt causato da un terminale
-  {}
-
-  if(IntlineNo>=3 && IntlineNo<=6)
+  if(IntlineNo>=3 && IntlineNo<=7)
   {
     memaddr bitmap = 0x10000040+0x04*(IntlineNo-3);
 
@@ -60,20 +77,29 @@ void interrupt()
     else if(bitmap & DEV7ON) DevNo = 7;
     else DevNo = -1;
 
+    if(IntlineNo==7) // è un terminale
+    {
+    }
+
     memaddr devAddrBase = START_DEVREG+((IntlineNo-3)*0x80)+(DevNo*0x10);
 
     dtpreg_t *devReg = (dtpreg_t *)devAddrBase;
-    memaddr stateAddr = devReg->status;
-
-    //probabilemnte sbagliato
-    state_t *state = (state_t *)stateAddr;
-    semd_t *sem = (semd_t *)state->reg_a1;
-    pcb_t *unblocked = headBlocked(sem->s_key);
-
+    memaddr savedStatus = devReg->status;
     devReg->command=ACK;
-    SYSCALL(VERHOGEN, *sem->s_key, 0, 0);
 
+    int *sem = &deviceSemaphores[findDeviceIndex(devAddrBase)];
+    pcb_t *unblocked = removeBlocked(sem);
 
+    if(unblocked != NULL)
+    {
+      unblocked->p_s.reg_a1 = savedStatus;
+      list_add(&unblocked->p_list, &readyQueue);
+    }
+
+    if(currentProcess != NULL)
+      LDST(stato);
+    else
+      scheduler();
   }
   
 }

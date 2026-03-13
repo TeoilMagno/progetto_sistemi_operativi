@@ -9,6 +9,6 @@
 #include <uriscv/liburiscv.h>
 #include <uriscv/cpu.h>
 
-void interrupt();
+void interruptHandler(state_t *stato);
 
 #endif

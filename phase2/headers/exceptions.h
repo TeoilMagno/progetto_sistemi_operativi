@@ -6,6 +6,7 @@
 #include "../../phase1/headers/asl.h"
 #include "../../phase1/headers/pcb.h"
 #include "./initial.h"
+#include "./interrupts.h"
 #include <uriscv/liburiscv.h>
 #include <uriscv/cpu.h>
 
