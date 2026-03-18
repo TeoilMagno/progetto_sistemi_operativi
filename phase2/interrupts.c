@@ -1,26 +1,5 @@
 #include"./headers/interrupts.h"
 
-int findDeviceIndex(memaddr deviceAddr)
-{
-  //0x10 equivale alla dimensione in memoria che occupa ogni device
-  unsigned int bottom = (unsigned int)deviceAddr - START_DEVREG;
-
-  //-1 in caso di errore
-  int deviceIndex = -1;
-
-  //controllo se il device è un terminale, in caso ogni terminale è suddiviso in due subdevice
-  //ognuno che occupa 0x8
-  if(bottom >= 32*0x10)
-    deviceIndex = 32 + (bottom-(32*0x10)/0x8);
-  else //non è un terminale
-    deviceIndex = bottom/0x10;
-
-  if(deviceIndex<0 || deviceIndex>49)
-    return -1; //errore dispositivo non valido
-  
-  return deviceIndex;
-}
-
 void interruptHandler(state_t *stato)
 {
   //calculates Interrupt Exception Code
@@ -144,11 +123,7 @@ void handlePLT(state_t *stato)
 {
   setTIMER((memaddr) 5);
 
-  currentProcess->p_s.entry_hi=stato->entry_hi;
-  currentProcess->p_s.cause=stato->cause;
-  currentProcess->p_s.status=stato->status;
-  currentProcess->p_s.pc_epc=stato->pc_epc;
-  currentProcess->p_s.mie=stato->mie;
+  copyState(&currentProcess->p_s, stato);
 
   for(int c=0;c<STATE_GPR_LEN;c++)
   {

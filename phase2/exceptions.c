@@ -49,39 +49,6 @@ void exceptionHandler()
   }
 }
 
-pcb_t* findProcess(int pid)
-{
-  if(currentProcess!=NULL && currentProcess->p_pid==pid)
-  {
-    return currentProcess;
-  }
-  
-  struct list_head* iter;
-  list_for_each(iter, &readyQueue)
-  {
-    pcb_t* item = container_of(iter, pcb_t, p_list);
-    if (item->p_pid==pid)
-    {
-      return item;
-    }
-  }
-  return findBlockedPcb(pid);  
-}
-
-void killProcess(pcb_t* pcb)
-{
-  struct list_head *iter;
-  list_for_each(iter, &pcb->p_child)
-  {
-    pcb_t* item = container_of(iter, pcb_t, p_list);
-    killProcess(item);
-  }
-  outChild(pcb);
-  outProcQ(&readyQueue, pcb);
-  outBlocked(pcb);
-  freePcb(pcb);
-}
-
 void syscallHandler(state_t *state)
 {
   switch(state->reg_a0)
@@ -163,17 +130,68 @@ void syscallHandler(state_t *state)
       break;
     }
     case -5:
+    {
+      int *commandAddr = (int *)state->reg_a1;
+      int value = state->reg_a2;
+      *commandAddr = value;
+      int* semPtr = &deviceSemaphore[findDeviceIndex(*commandAddr)];
+      (*semPtr)--;
       break;
+    }
     case -6:
+    {
+      int pid=getPRID();
+      cpu_t currentTime;
+      STCK(currentTime);
+      cpu_t time=currentTime-startTime[pid];
+      state->reg_a0 = findProcess(pid)->p_time+time;
+      LDST(state);
       break;
+    }
     case -7:
+    {
+      int *pseudoClock = &deviceSemaphore[47];
+      insertBlocked(pseudoClock, currentProcess);
+      scheduler();
       break;
+    }
     case -8:
+    {
+      //pcb_t *currentProcess = findProcess(getPRID());
+      state->reg_a0=(memaddr)currentProcess->p_supportStruct;
       break;
+    }
     case -9:
+    {
+      //pcb_t *currentProcess = findProcess(getPRID());
+      if(state->reg_a1==0)
+      {
+        state->reg_a0=currentProcess->p_pid;
+      }
+      else
+      {
+        if(currentProcess->p_parent!=NULL)
+        {
+          state->reg_a0=currentProcess->p_parent->p_pid;
+        }
+        else
+        {
+          state->reg_a0=0;
+        }
+      }
       break;
+    }
     case -10:
+    {
+      copyState(&currentProcess->p_s, state);
+      cpu_t currentTime;
+      STCK(currentTime);
+      cpu_t time=currentTime-startTime[getPRID()];
+      currentProcess->p_time=time;
+      currentProcess=NULL;
+      scheduler();
       break;
+    }
     default:
       break;
   }

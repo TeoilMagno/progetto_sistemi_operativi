@@ -9,8 +9,8 @@
 #include "./scheduler.h"
 #include <uriscv/liburiscv.h>
 #include <uriscv/cpu.h>
+#include "./functions.h"
 
-int findDeviceIndex(memaddr deviceAddr);
 void interruptHandler(state_t *stato);
 void handleDevice(int IntlineNo, state_t *stato);
 void handlePLT(state_t *stato);

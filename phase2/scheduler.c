@@ -1,5 +1,7 @@
 #include "./headers/scheduler.h"
 
+extern cpu_t startTime[NCPU];
+
 void scheduler()
 {
   if(list_empty(&readyQueue))
@@ -21,6 +23,7 @@ void scheduler()
   }
   else //se la readyQueue non è vuota
   {
+    STCK(startTime[getPRID()]);
     currentProcess->p_list = readyQueue;
     list_del(&readyQueue);
     currentProcess->p_time=TIMESLICE;

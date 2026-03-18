@@ -1,18 +1,20 @@
-#ifndef EXCEPTION_HANDLER
-#define EXCEPTION_HANDLER
+#ifndef FUNCTIONS
+#define FUNCTIONS
 
 #include "../../headers/listx.h"
 #include "../../headers/types.h"
 #include "../../phase1/headers/asl.h"
 #include "../../phase1/headers/pcb.h"
-#include "./functions.h"
 #include "./initial.h"
-#include "./interrupts.h"
 #include <uriscv/liburiscv.h>
 #include <uriscv/cpu.h>
 
-extern cpu_t startTime[NCPU];
+void copyState(state_t *dep, state_t *arr);
 
-void exceptionHandler();
+int findDeviceIndex(memaddr deviceAddr);
+
+pcb_t* findProcess(int pid);
+
+void killProcess(pcb_t* pcb);
 
 #endif
