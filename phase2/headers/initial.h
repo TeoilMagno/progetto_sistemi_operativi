@@ -9,6 +9,8 @@
 #include "./exceptions.h"
 #include <uriscv/liburiscv.h>
 
+#define PSEUDOINDEX 48
+
 extern unsigned int processCount;
 extern unsigned int softBlockCount;
 extern struct list_head readyQueue;
