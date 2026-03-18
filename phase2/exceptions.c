@@ -1,5 +1,7 @@
 #include "./headers/exceptions.h"
 
+void syscallHandler(state_t *state);
+
 void exceptionHandler()
 {
   unsigned int cause = getCAUSE();
@@ -12,45 +14,28 @@ void exceptionHandler()
   }
   else
   {
-    switch(causeCode)
+    if(causeCode>=24 && causeCode<=28)
     {
-      case 8:
-        //SYSCALL
-        break;
-      
-      case 11:
-        //SYSCALL
-        break;
-      
-      case 24:
-        //TLB
-        break;
-      
-      case 25:
-        //TLB
-        break;
-      
-      case 26:
-        //TLB
-        break;
-      
-      case 27:
-        //TLB
-        break;
-      
-      case 28:
-        //TLB
-        break;
-      
-      default:
-        //Program Trap
-        break;
+      //TLB
     }
+    else if(causeCode==8 || causeCode==11)
+    {
+      syscallHandler(state);
+    }
+    else if((causeCode>=0&&causeCode<=7)||causeCode==9||causeCode==10||(causeCode>=12&&causeCode<=23))
+    {
+      //Program Trap
+    } 
   }
 }
 
 void syscallHandler(state_t *state)
 {
+  if((state->status & MSTATUS_MPP_MASK)==00)
+  {
+    state->cause = PRIVINSTR;
+    //Program Trap
+  }
   switch(state->reg_a0)
   { 
     case -1:
@@ -78,8 +63,9 @@ void syscallHandler(state_t *state)
         insertChild(currentProcess, newPcb);
         insertProcQ(&readyQueue, newPcb);
         processCount++;
-        LDST(state);
       }
+      state->pc_epc+=4;
+      LDST(state);
       break;
     }
     case -2:
@@ -107,6 +93,7 @@ void syscallHandler(state_t *state)
       else
       {
         *semAdd += -1;
+        state->pc_epc+=4;
         LDST(state);
       }
       break;
@@ -126,6 +113,7 @@ void syscallHandler(state_t *state)
           *semAdd += 1;
         }
       }
+      state->pc_epc+=4;
       LDST(state);
       break;
     }
@@ -136,6 +124,8 @@ void syscallHandler(state_t *state)
       *commandAddr = value;
       int* semPtr = &deviceSemaphore[findDeviceIndex(*commandAddr)];
       (*semPtr)--;
+      state->pc_epc+=4;
+      LDST(state);
       break;
     }
     case -6:
@@ -145,6 +135,7 @@ void syscallHandler(state_t *state)
       STCK(currentTime);
       cpu_t time=currentTime-startTime[pid];
       state->reg_a0 = findProcess(pid)->p_time+time;
+      state->pc_epc+=4;
       LDST(state);
       break;
     }
@@ -159,6 +150,8 @@ void syscallHandler(state_t *state)
     {
       //pcb_t *currentProcess = findProcess(getPRID());
       state->reg_a0=(memaddr)currentProcess->p_supportStruct;
+      state->pc_epc+=4;
+      LDST(state);
       break;
     }
     case -9:
@@ -179,6 +172,8 @@ void syscallHandler(state_t *state)
           state->reg_a0=0;
         }
       }
+      state->pc_epc+=4;
+      LDST(state);
       break;
     }
     case -10:
