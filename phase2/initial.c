@@ -5,6 +5,7 @@ unsigned int softBlockCount=0;
 struct list_head readyQueue;
 pcb_t *currentProcess=NULL;
 int deviceSemaphore[SEMDEVLEN];
+cpu_t startTime[NCPU];
 
 extern void test();
 extern void uTLB_RefillHandler();
@@ -21,7 +22,10 @@ int main()
   initASL();
 
   mkEmptyProcQ(&readyQueue);
-
+  for(int c=0;c<NCPU;c++)
+  {
+    startTime[c]=0;
+  }
   for(int c=0;c<NRSEMAPHORES;c++)
   {
     deviceSemaphore[c]=0;

@@ -1,5 +1,7 @@
 #include "./headers/scheduler.h"
 
+extern cpu_t startTime[NCPU];
+
 void scheduler()
 {
   if(list_empty(&readyQueue))

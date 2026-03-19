@@ -1,10 +1,12 @@
 #include "./headers/exceptions.h"
 
+void syscallHandler(state_t *state);
+
 void exceptionHandler()
 {
   unsigned int cause = getCAUSE();
-  unsigned int causeCode = cause && CAUSE_EXCCODE_MASK;
-  state_t *state = (state_t *) GET_EXCEPTION_STATE_PTR(getPRID());
+  unsigned int causeCode = cause & CAUSE_EXCCODE_MASK;
+  state_t *state = GET_EXCEPTION_STATE_PTR(getPRID());
 
   if(CAUSE_IS_INT(cause))
   {
@@ -12,78 +14,28 @@ void exceptionHandler()
   }
   else
   {
-    switch(causeCode)
+    if(causeCode>=24 && causeCode<=28)
     {
-      case 8:
-        //SYSCALL
-        break;
-      
-      case 11:
-        //SYSCALL
-        break;
-      
-      case 24:
-        //TLB
-        break;
-      
-      case 25:
-        //TLB
-        break;
-      
-      case 26:
-        //TLB
-        break;
-      
-      case 27:
-        //TLB
-        break;
-      
-      case 28:
-        //TLB
-        break;
-      
-      default:
-        //Program Trap
-        break;
+      //TLB
     }
-  }
-}
-
-pcb_t* findProcess(int pid)
-{
-  if(currentProcess!=NULL && currentProcess->p_pid==pid)
-  {
-    return currentProcess;
-  }
-  
-  struct list_head* iter;
-  list_for_each(iter, &readyQueue)
-  {
-    pcb_t* item = container_of(iter, pcb_t, p_list);
-    if (item->p_pid==pid)
+    else if(causeCode==8 || causeCode==11)
     {
-      return item;
+      syscallHandler(state);
     }
+    else if((causeCode>=0&&causeCode<=7)||causeCode==9||causeCode==10||(causeCode>=12&&causeCode<=23))
+    {
+      //Program Trap
+    } 
   }
-  return findBlockedPcb(pid);  
-}
-
-void killProcess(pcb_t* pcb)
-{
-  struct list_head *iter;
-  list_for_each(iter, &pcb->p_child)
-  {
-    pcb_t* item = container_of(iter, pcb_t, p_list);
-    killProcess(item);
-  }
-  outChild(pcb);
-  outProcQ(&readyQueue, pcb);
-  outBlocked(pcb);
-  freePcb(pcb);
 }
 
 void syscallHandler(state_t *state)
 {
+  if((state->status & MSTATUS_MPP_MASK)==0)
+  {
+    state->cause = PRIVINSTR;
+    //Program Trap
+  }
   switch(state->reg_a0)
   { 
     case -1:
@@ -111,8 +63,9 @@ void syscallHandler(state_t *state)
         insertChild(currentProcess, newPcb);
         insertProcQ(&readyQueue, newPcb);
         processCount++;
-        LDST(state);
       }
+      state->pc_epc+=4;
+      LDST(state);
       break;
     }
     case -2:
@@ -135,11 +88,17 @@ void syscallHandler(state_t *state)
       if(*semAdd<=0)
       {
         insertBlocked(semAdd, currentProcess);
+        state->pc_epc+=4;
+        copyState(&currentProcess->p_s, state);
+        currentProcess->p_time+=updateTime(getPRID());
+        currentProcess=NULL;
+        softBlockCount++;
         scheduler();
       }
       else
       {
-        *semAdd += -1;
+        (*semAdd)--;
+        state->pc_epc+=4;
         LDST(state);
       }
       break;
@@ -156,24 +115,87 @@ void syscallHandler(state_t *state)
         }
         else
         {
-          *semAdd += 1;
+          (*semAdd)++;
         }
       }
+      state->pc_epc+=4;
       LDST(state);
       break;
     }
     case -5:
+    {
+      memaddr *commandAddr = (memaddr *)state->reg_a1;
+      int value = state->reg_a2;
+      *commandAddr = value;
+      int* semPtr = &deviceSemaphore[findDeviceIndex(*commandAddr)];
+      (*semPtr)--;
+      insertBlocked(semPtr, currentProcess);
+      state->pc_epc+=4;
+      copyState(&currentProcess->p_s, state);
+      currentProcess->p_time+=updateTime(getPRID());
+      currentProcess=NULL;
+      softBlockCount++;
+      scheduler();
       break;
+    }
     case -6:
+    {
+      int pid=getPRID();
+      state->reg_a0 = findProcess(pid)->p_time+updateTime(pid);
+      state->pc_epc+=4;
+      LDST(state);
       break;
+    }
     case -7:
+    {
+      int *pseudoClock = &deviceSemaphore[47]; 
+      insertBlocked(pseudoClock, currentProcess);
+      state->pc_epc+=4;
+      copyState(&currentProcess->p_s, state);
+      currentProcess->p_time+=updateTime(getPRID());
+      currentProcess=NULL;
+      softBlockCount++;
+      scheduler();
       break;
+    }
     case -8:
+    {
+      state->reg_a0=(memaddr)currentProcess->p_supportStruct;
+      state->pc_epc+=4;
+      LDST(state);
       break;
+    }
     case -9:
+    {
+      if(state->reg_a1==0)
+      {
+        state->reg_a0=currentProcess->p_pid;
+      }
+      else
+      {
+        if(currentProcess->p_parent!=NULL)
+        {
+          state->reg_a0=currentProcess->p_parent->p_pid;
+        }
+        else
+        {
+          state->reg_a0=0;
+        }
+      }
+      state->pc_epc+=4;
+      LDST(state);
       break;
+    }
     case -10:
+    {
+      insertProcQ(&readyQueue, currentProcess);
+      state->pc_epc+=4;
+      copyState(&currentProcess->p_s, state);
+      currentProcess->p_time+=updateTime(getPRID());
+      currentProcess=NULL;
+      scheduler();
       break;
+    }
     default:
       break;
   }
