@@ -5,8 +5,8 @@ void syscallHandler(state_t *state);
 void exceptionHandler()
 {
   unsigned int cause = getCAUSE();
-  unsigned int causeCode = cause && CAUSE_EXCCODE_MASK;
-  state_t *state = (state_t *) GET_EXCEPTION_STATE_PTR(getPRID());
+  unsigned int causeCode = cause & CAUSE_EXCCODE_MASK;
+  state_t *state = GET_EXCEPTION_STATE_PTR(getPRID());
 
   if(CAUSE_IS_INT(cause))
   {
@@ -31,7 +31,7 @@ void exceptionHandler()
 
 void syscallHandler(state_t *state)
 {
-  if((state->status & MSTATUS_MPP_MASK)==00)
+  if((state->status & MSTATUS_MPP_MASK)==0)
   {
     state->cause = PRIVINSTR;
     //Program Trap
@@ -88,11 +88,16 @@ void syscallHandler(state_t *state)
       if(*semAdd<=0)
       {
         insertBlocked(semAdd, currentProcess);
+        state->pc_epc+=4;
+        copyState(&currentProcess->p_s, state);
+        currentProcess->p_time+=updateTime(getPRID());
+        currentProcess=NULL;
+        softBlockCount++;
         scheduler();
       }
       else
       {
-        *semAdd += -1;
+        (*semAdd)--;
         state->pc_epc+=4;
         LDST(state);
       }
@@ -110,7 +115,7 @@ void syscallHandler(state_t *state)
         }
         else
         {
-          *semAdd += 1;
+          (*semAdd)++;
         }
       }
       state->pc_epc+=4;
@@ -119,36 +124,42 @@ void syscallHandler(state_t *state)
     }
     case -5:
     {
-      int *commandAddr = (int *)state->reg_a1;
+      memaddr *commandAddr = (memaddr *)state->reg_a1;
       int value = state->reg_a2;
       *commandAddr = value;
       int* semPtr = &deviceSemaphore[findDeviceIndex(*commandAddr)];
       (*semPtr)--;
+      insertBlocked(semPtr, currentProcess);
       state->pc_epc+=4;
-      LDST(state);
+      copyState(&currentProcess->p_s, state);
+      currentProcess->p_time+=updateTime(getPRID());
+      currentProcess=NULL;
+      softBlockCount++;
+      scheduler();
       break;
     }
     case -6:
     {
       int pid=getPRID();
-      cpu_t currentTime;
-      STCK(currentTime);
-      cpu_t time=currentTime-startTime[pid];
-      state->reg_a0 = findProcess(pid)->p_time+time;
+      state->reg_a0 = findProcess(pid)->p_time+updateTime(pid);
       state->pc_epc+=4;
       LDST(state);
       break;
     }
     case -7:
     {
-      int *pseudoClock = &deviceSemaphore[47];
+      int *pseudoClock = &deviceSemaphore[47]; 
       insertBlocked(pseudoClock, currentProcess);
+      state->pc_epc+=4;
+      copyState(&currentProcess->p_s, state);
+      currentProcess->p_time+=updateTime(getPRID());
+      currentProcess=NULL;
+      softBlockCount++;
       scheduler();
       break;
     }
     case -8:
     {
-      //pcb_t *currentProcess = findProcess(getPRID());
       state->reg_a0=(memaddr)currentProcess->p_supportStruct;
       state->pc_epc+=4;
       LDST(state);
@@ -156,7 +167,6 @@ void syscallHandler(state_t *state)
     }
     case -9:
     {
-      //pcb_t *currentProcess = findProcess(getPRID());
       if(state->reg_a1==0)
       {
         state->reg_a0=currentProcess->p_pid;
@@ -178,11 +188,10 @@ void syscallHandler(state_t *state)
     }
     case -10:
     {
+      insertProcQ(&readyQueue, currentProcess);
+      state->pc_epc+=4;
       copyState(&currentProcess->p_s, state);
-      cpu_t currentTime;
-      STCK(currentTime);
-      cpu_t time=currentTime-startTime[getPRID()];
-      currentProcess->p_time=time;
+      currentProcess->p_time+=updateTime(getPRID());
       currentProcess=NULL;
       scheduler();
       break;

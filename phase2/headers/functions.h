@@ -17,4 +17,6 @@ pcb_t* findProcess(int pid);
 
 void killProcess(pcb_t* pcb);
 
+int updateTime(int pid);
+
 #endif

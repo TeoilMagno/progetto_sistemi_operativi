@@ -63,4 +63,10 @@ void killProcess(pcb_t* pcb)
   freePcb(pcb);
 }
 
-
+int updateTime(int pid)
+{
+  cpu_t currentTime;
+  STCK(currentTime);
+  cpu_t time=currentTime-startTime[pid];
+  return pid;
+}
