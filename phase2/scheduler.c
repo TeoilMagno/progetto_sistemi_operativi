@@ -21,9 +21,10 @@ void scheduler()
   }
   else //se la readyQueue non è vuota
   {
-    currentProcess->p_list = readyQueue;
-    list_del(&readyQueue);
-    currentProcess->p_time=TIMESLICE;
-    LDST(&currentProcess->p_s);
+    //Estrae il primo pcb da readyQueue che diventa il processo in esecuzione sulla CPU
+    currentProcess = removeProcQ(&readyQueue);
+    //Timer di 5 ms allo scadere del quale genera un interrupt
+    setTIMER(TIMESLICE);
+    LDST(&(currentProcess->p_s));
   }
 }
