@@ -14,6 +14,6 @@
 void interruptHandler(state_t *stato);
 void handleDevice(int IntlineNo, state_t *stato);
 void handlePLT(state_t *stato);
-void handleClock(state_t *stato);
+void handleIntervalClock(state_t *stato);
 
 #endif

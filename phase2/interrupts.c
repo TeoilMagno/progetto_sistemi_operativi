@@ -121,7 +121,7 @@ void handleDevice(int IntlineNo, state_t *stato)
 
 void handlePLT(state_t *stato)
 {
-  setTIMER((memaddr) 5);
+  setTIMER(TIMESLICE);
 
   copyState(&currentProcess->p_s, stato);
 
@@ -134,7 +134,19 @@ void handlePLT(state_t *stato)
   scheduler();
 }
 
-void handleClock(state_t *stato)
+void handleIntervalClock(state_t *stato)
 {
-  return;
+  LIDT(PSECOND);
+
+  pcb_t *p=NULL;
+  for(int c=0;c<deviceSemaphore[PSEUDOINDEX];c++)
+  {
+    p=removeBlocked(&deviceSemaphore[PSEUDOINDEX]);
+    list_add(&p->plist, &readyQueue);
+  }
+
+  if(currentProcess!=NULL)
+    LDST(stato);
+  else
+    scheduler();
 }
