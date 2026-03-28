@@ -7,6 +7,7 @@
 #include "../../phase1/headers/pcb.h"
 #include "./initial.h"
 #include <uriscv/liburiscv.h>
+#include "./functions.h"
 
 void scheduler();
 
