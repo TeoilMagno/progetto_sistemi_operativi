@@ -161,13 +161,13 @@ void handlePLT(state_t *stato)
 
 void handleIntervalClock(state_t *stato)
 {
-  LIDT(PSECOND);
+  LDIT(PSECOND);
 
   pcb_t *p=NULL;
   for(int c=0;c<deviceSemaphore[PSEUDOINDEX];c++)
   {
     p=removeBlocked(&deviceSemaphore[PSEUDOINDEX]);
-    list_add(&p->plist, &readyQueue);
+    list_add(&p->p_list, &readyQueue);
   }
 
   if(currentProcess!=NULL)
