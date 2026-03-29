@@ -6,17 +6,17 @@
 #include "../../phase1/headers/asl.h"
 #include "../../phase1/headers/pcb.h"
 #include "./initial.h"
-#include <uriscv/liburiscv.h>
 #include <uriscv/cpu.h>
+#include <uriscv/liburiscv.h>
 
 void copyState(state_t *dep, state_t *arr);
 
 int findDeviceIndex(memaddr deviceAddr);
 
-pcb_t* findProcess(int pid);
+pcb_t *findProcess(int pid);
 
-void killProcess(pcb_t* pcb);
+void killProcess(pcb_t *pcb);
 
-int updateTime(int pid);
+cpu_t updateTime(int pid);
 
 #endif
