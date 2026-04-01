@@ -1,4 +1,5 @@
 #include "./headers/functions.h"
+#include <uriscv/const.h>
 
 void copyState(state_t *dep, state_t *arr) {
   dep->entry_hi = arr->entry_hi;
@@ -6,6 +7,10 @@ void copyState(state_t *dep, state_t *arr) {
   dep->status = arr->status;
   dep->pc_epc = arr->pc_epc;
   dep->mie = arr->mie;
+
+  for (int c = 0; c < STATE_GPR_LEN; c++) {
+    dep->gpr[c] = arr->gpr[c];
+  }
 }
 
 int findDeviceIndex(memaddr deviceAddr) {
