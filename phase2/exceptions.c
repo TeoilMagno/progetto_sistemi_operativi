@@ -5,7 +5,7 @@ void syscallHandler(state_t *state);
 void exceptionHandler()
 {
   unsigned int cause = getCAUSE();
-  unsigned int causeCode = cause & CAUSE_EXCCODE_MASK;
+  unsigned int causeCode = (cause & CAUSE_EXCCODE_MASK) >> CAUSE_EXCCODE_BIT;
   state_t *state = GET_EXCEPTION_STATE_PTR(getPRID());
 
   if(CAUSE_IS_INT(cause))
@@ -14,17 +14,17 @@ void exceptionHandler()
   }
   else
   {
-    if(causeCode>=24 && causeCode<=28)
+    if(causeCode>=24 && causeCode<=28) //Gestione TBL
     {
-      //TLB
+      passUpOrDie(PGFAULTEXCEPT, state);
     }
-    else if(causeCode==8 || causeCode==11)
+    else if(causeCode==8 || causeCode==11) //Gestione SYSCALL
     {
       syscallHandler(state);
     }
-    else if((causeCode>=0&&causeCode<=7)||causeCode==9||causeCode==10||(causeCode>=12&&causeCode<=23))
+    else //Gestione Program Trap
     {
-      //Program Trap
+      passUpOrDie(GENERALEXCEPT, state);
     } 
   }
 }
@@ -205,6 +205,7 @@ void passUpOrDie(int index, state_t *exceptionState){
     if(currentProcess->p_supportStruct == NULL){ //caso Die
         //Terminazione del processo
         killProcess(currentProcess);
+        currentProcess = NULL;
         scheduler();
     }else{ //caso Pass Up
         //copia dello stato attuale in sup_exceptState        
