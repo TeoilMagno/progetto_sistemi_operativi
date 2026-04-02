@@ -200,3 +200,17 @@ void syscallHandler(state_t *state)
       break;
   }
 }
+
+void passUpOrDie(int index, state_t *exceptionState){
+    if(currentProcess->p_supportStruct == NULL){ //caso Die
+        //Terminazione del processo
+        killProcess(currentProcess);
+        scheduler();
+    }else{ //caso Pass Up
+        //copia dello stato attuale in sup_exceptState        
+        copyState(&(currentProcess->p_supportStruct->sup_exceptState[index]), exceptionState);
+        //Caricamento del contesto in LDCXT
+        state_t *context = &(currentProcess->p_supportStruct->sup_exceptContext[index]);       
+        LDCXT(context);
+    }
+}
