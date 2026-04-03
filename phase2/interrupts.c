@@ -1,5 +1,6 @@
 #include "./headers/interrupts.h"
 #include "headers/functions.h"
+#include "headers/klog.h"
 
 void interruptHandler(state_t *stato) {
   // calculates Interrupt Exception Code
@@ -110,6 +111,8 @@ void handleDevice(int IntlineNo, state_t *stato) {
       else
         PANIC();
     }
+    klog_print("devAddr: ");
+    klog_print_hex(devAddr);
 
     if (sem != NULL)
       unblocked = removeBlocked(sem);
