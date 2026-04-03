@@ -16,8 +16,9 @@ void exceptionHandler() {
     } else if (causeCode == 8 || causeCode == 11) // Gestione SYSCALL
     {
       syscallHandler(state);
-    } else // Gestione Program Trap
-    {
+      // Gestione Program Trap
+    } else if ((causeCode >= 0 && causeCode <= 7) || causeCode == 9 ||
+               causeCode == 10 || (causeCode >= 12 && causeCode <= 23)) {
       passUpOrDie(GENERALEXCEPT, state);
     }
   }
@@ -37,7 +38,7 @@ void syscallHandler(state_t *state) {
     return;
   }
   switch (state->reg_a0) {
-  case -1: {
+  case CREATEPROCESS: {
     pcb_t *newPcb = allocPcb();
     if (newPcb == NULL) {
       state->reg_a0 = -1;
@@ -45,15 +46,6 @@ void syscallHandler(state_t *state) {
       state->reg_a0 = newPcb->p_pid;
       state_t *sreg_a1 = (state_t *)state->reg_a1;
       copyState(&newPcb->p_s, sreg_a1);
-      // for(int i=0; i<STATE_GPR_LEN; i++)
-      // {
-      //   newPcb->p_s.gpr[i]=sreg_a1->gpr[i];
-      // }
-      // newPcb->p_s.entry_hi=sreg_a1->entry_hi;
-      // newPcb->p_s.cause=sreg_a1->cause;
-      // newPcb->p_s.status=sreg_a1->status;
-      // newPcb->p_s.pc_epc=sreg_a1->pc_epc;
-      // newPcb->p_s.mie=sreg_a1->mie;
       newPcb->p_prio = state->reg_a2;
       newPcb->p_supportStruct = (support_t *)state->reg_a3;
       insertChild(currentProcess, newPcb);
@@ -64,7 +56,7 @@ void syscallHandler(state_t *state) {
     LDST(state);
     break;
   }
-  case -2: {
+  case TERMPROCESS: {
     if (state->reg_a1 == 0) {
       killProcess(currentProcess);
       scheduler();
@@ -74,7 +66,7 @@ void syscallHandler(state_t *state) {
     }
     break;
   }
-  case -3: {
+  case PASSEREN: {
     int *semAdd = (int *)state->reg_a1;
     if (*semAdd <= 0) {
       insertBlocked(semAdd, currentProcess);
@@ -91,7 +83,7 @@ void syscallHandler(state_t *state) {
     }
     break;
   }
-  case -4: {
+  case VERHOGEN: {
     int *semAdd = (int *)state->reg_a1;
     if (*semAdd <= 0) {
       pcb_t *unlockedProcess = removeBlocked(semAdd);
@@ -105,7 +97,7 @@ void syscallHandler(state_t *state) {
     LDST(state);
     break;
   }
-  case -5: {
+  case DOIO: {
     memaddr *commandAddr = (memaddr *)state->reg_a1;
     int value = state->reg_a2;
     *commandAddr = value;
@@ -120,14 +112,14 @@ void syscallHandler(state_t *state) {
     scheduler();
     break;
   }
-  case -6: {
+  case GETTIME: {
     int pid = getPRID();
     state->reg_a0 = findProcess(pid)->p_time + updateTime(pid);
     state->pc_epc += 4;
     LDST(state);
     break;
   }
-  case -7: {
+  case CLOCKWAIT: {
     int *pseudoClock = &deviceSemaphore[47];
     insertBlocked(pseudoClock, currentProcess);
     state->pc_epc += 4;
@@ -138,13 +130,13 @@ void syscallHandler(state_t *state) {
     scheduler();
     break;
   }
-  case -8: {
+  case GETSUPPORTPTR: {
     state->reg_a0 = (memaddr)currentProcess->p_supportStruct;
     state->pc_epc += 4;
     LDST(state);
     break;
   }
-  case -9: {
+  case GETPROCESSID: {
     if (state->reg_a1 == 0) {
       state->reg_a0 = currentProcess->p_pid;
     } else {
@@ -158,7 +150,7 @@ void syscallHandler(state_t *state) {
     LDST(state);
     break;
   }
-  case -10: {
+  case YIELD: {
     insertProcQ(&readyQueue, currentProcess);
     state->pc_epc += 4;
     copyState(&currentProcess->p_s, state);
