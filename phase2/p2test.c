@@ -141,13 +141,9 @@ void uTLB_RefillHandler() {
 /*                 p1 -- the root process                            */
 /*                                                                   */
 void test() {
-  print("0");
   SYSCALL(VERHOGEN, (int)&sem_testsem, 0, 0); /* V(sem_testsem)   */
-  print("1");
   SYSCALL(VERHOGEN, (int)&sem_testsem, 0, 0);
-  print("2");
   SYSCALL(VERHOGEN, (int)&sem_testsem, 0, 0);
-  print("3");
 
   if (sem_testsem != 3) {
     print("Error: wrong semaphore value\n");

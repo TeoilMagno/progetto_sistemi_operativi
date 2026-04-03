@@ -8,6 +8,7 @@
 #include "./functions.h"
 #include "./initial.h"
 #include "./interrupts.h"
+#include "./klog.h"
 #include <uriscv/cpu.h>
 #include <uriscv/liburiscv.h>
 
