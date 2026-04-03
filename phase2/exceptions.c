@@ -88,20 +88,13 @@ void syscallHandler(state_t *state) {
     pcb_t *unlockedProcess = removeBlocked(semAdd);
     if (unlockedProcess != NULL) {
       insertProcQ(&readyQueue, unlockedProcess);
-      if (*semAdd <= 0) {
-        pcb_t *unlockedProcess = removeBlocked(semAdd);
-        if (unlockedProcess != NULL) {
-          insertProcQ(&readyQueue, unlockedProcess);
-        } else {
-          (*semAdd)++;
-        }
-      } else {
-        (*semAdd)++;
-      }
-      state->pc_epc += 4;
-      LDST(state);
-      break;
+    } else {
+      (*semAdd)++;
     }
+    state->pc_epc += 4;
+    LDST(state);
+    break;
+  }
   case DOIO: {
     memaddr *commandAddr = (memaddr *)state->reg_a1;
     int value = state->reg_a2;
@@ -171,21 +164,21 @@ void syscallHandler(state_t *state) {
     passUpOrDie(GENERALEXCEPT, state);
     break;
   }
-  }
+}
 
-  void passUpOrDie(int index, state_t *exceptionState) {
-    if (currentProcess->p_supportStruct == NULL) { // caso Die
-      // Terminazione del processo
-      killProcess(currentProcess);
-      currentProcess = NULL;
-      scheduler();
-    } else { // caso Pass Up
-      // copia dello stato attuale in sup_exceptState
-      copyState(&(currentProcess->p_supportStruct->sup_exceptState[index]),
-                exceptionState);
-      // Caricamento del contesto in LDCXT
-      context_t *ctx =
-          &(currentProcess->p_supportStruct->sup_exceptContext[index]);
-      LDCXT(ctx->stackPtr, ctx->status, ctx->pc);
-    }
+void passUpOrDie(int index, state_t *exceptionState) {
+  if (currentProcess->p_supportStruct == NULL) { // caso Die
+    // Terminazione del processo
+    killProcess(currentProcess);
+    currentProcess = NULL;
+    scheduler();
+  } else { // caso Pass Up
+    // copia dello stato attuale in sup_exceptState
+    copyState(&(currentProcess->p_supportStruct->sup_exceptState[index]),
+              exceptionState);
+    // Caricamento del contesto in LDCXT
+    context_t *ctx =
+        &(currentProcess->p_supportStruct->sup_exceptContext[index]);
+    LDCXT(ctx->stackPtr, ctx->status, ctx->pc);
   }
+}
