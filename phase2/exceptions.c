@@ -33,8 +33,12 @@ void syscallHandler(state_t *state)
 {
   if((state->status & MSTATUS_MPP_MASK)==0)
   {
-    state->cause = PRIVINSTR;
+    unsigned int oldCode = (state->cause & GETEXECCODE); //Isolo la parte del registro che contine il codice errore attuale 
+    state->cause = state->cause - oldCode; //Tolgo oldCode da state->cause
+    state->cause = state->cause | (PRIVINSTR << CAUSESHIFT); //Inserisco PRIVINSTR per segnalare l'errore
     //Program Trap
+    passUpOrDie(GENERALEXCEPT, state);
+    return;
   }
   switch(state->reg_a0)
   { 
@@ -197,6 +201,9 @@ void syscallHandler(state_t *state)
       break;
     }
     default:
+      //Se la syscall non è nei casi da -1 a -10 passiamo il controllo a passUpOrDie
+      state->pc_epc += 4; 
+      passUpOrDie(GENERALEXCEPT, state); 
       break;
   }
 }
@@ -211,7 +218,7 @@ void passUpOrDie(int index, state_t *exceptionState){
         //copia dello stato attuale in sup_exceptState        
         copyState(&(currentProcess->p_supportStruct->sup_exceptState[index]), exceptionState);
         //Caricamento del contesto in LDCXT
-        state_t *context = &(currentProcess->p_supportStruct->sup_exceptContext[index]);       
-        LDCXT(context);
+        context_t *ctx = &(currentProcess->p_supportStruct->sup_exceptContext[index]);       
+        LDCXT(ctx->stackPtr, ctx->status, ctx->pc);
     }
 }
