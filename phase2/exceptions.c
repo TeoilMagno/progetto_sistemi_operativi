@@ -85,13 +85,11 @@ void syscallHandler(state_t *state) {
   }
   case VERHOGEN: {
     int *semAdd = (int *)state->reg_a1;
-    if (*semAdd <= 0) {
-      pcb_t *unlockedProcess = removeBlocked(semAdd);
-      if (unlockedProcess != NULL) {
-        insertProcQ(&readyQueue, unlockedProcess);
-      } else {
-        (*semAdd)++;
-      }
+    pcb_t *unlockedProcess = removeBlocked(semAdd);
+    if (unlockedProcess != NULL) {
+      insertProcQ(&readyQueue, unlockedProcess);
+    } else {
+      (*semAdd)++;
     }
     state->pc_epc += 4;
     LDST(state);
