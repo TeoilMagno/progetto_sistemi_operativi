@@ -1,6 +1,8 @@
 #include "./headers/functions.h"
 #include <uriscv/const.h>
 
+// evita problemi di compilazione dove  gcc prova ad usare memcpy per copiare
+// uno struct d tipo state_t da una variabile all'altra
 void copyState(state_t *dep, state_t *arr) {
   dep->entry_hi = arr->entry_hi;
   dep->cause = arr->cause;
@@ -13,6 +15,17 @@ void copyState(state_t *dep, state_t *arr) {
   }
 }
 
+/*
+ * mappatura dei device all'interno del deviceSempahore
+ *
+ *          +------------------+-----------+-------------+
+ *          | disk, flash,     | terminali | pseudoclock |
+ *          | network, printer |  (8x2)    |             |
+ * +--------+------------------+-----------+-------------+
+ * | indici | 0 ... 31         | 32 ... 47 | 48          |
+ * +--------+------------------+-----------+-------------+
+ *
+ */
 int findDeviceIndex(memaddr deviceAddr) {
   // 0x10 equivale alla dimensione in memoria che occupa ogni device
   unsigned int bottom = (unsigned int)deviceAddr - START_DEVREG;
