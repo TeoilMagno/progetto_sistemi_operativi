@@ -2,30 +2,30 @@
 
 extern cpu_t startTime[NCPU];
 
-void scheduler()
-{
-  if(list_empty(&readyQueue))
-  {
-    if(processCount==0)
+void scheduler() {
+  if (list_empty(&readyQueue)) {
+    // If the Process Count is 0, invoke the HALT BIOS service/instruction
+    // [Section 13.2]. Consider this a job well done!
+    if (processCount == 0)
       HALT();
-    else if(processCount>0 && softBlockCount>0)
-    {
-      //sets the mie register to enable interrupts and either disable the PLT
+    // If the Process Count > 0 and Soft-block Count > 0 enter a Wait State.
+    else if (processCount > 0 && softBlockCount > 0) {
+      // sets the mie register to enable interrupts and either disable the PLT
       setMIE(MIE_ALL & ~MIE_MTIE_MASK);
       unsigned int status = getSTATUS();
       status |= MSTATUS_MIE_MASK;
       setSTATUS(status);
       WAIT();
     }
-    //caso di deadlock
-    else if (processCount>0 && softBlockCount==0)
+    // caso di deadlock
+    else if (processCount > 0 && softBlockCount == 0)
       PANIC();
-  }
-  else //se la readyQueue non è vuota
+  } else // se la readyQueue non è vuota
   {
-    //Estrae il primo pcb da readyQueue che diventa il processo in esecuzione sulla CPU
+    // Estrae il primo pcb da readyQueue che diventa il processo in esecuzione
+    // sulla CPU
     currentProcess = removeProcQ(&readyQueue);
-    //Timer di 5 ms allo scadere del quale genera un interrupt
+    // Timer di 5 ms allo scadere del quale genera un interrupt
     setTIMER(TIMESLICE);
     LDST(&(currentProcess->p_s));
   }

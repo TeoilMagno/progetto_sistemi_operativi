@@ -1,4 +1,5 @@
 #include "./headers/interrupts.h"
+#include "headers/functions.h"
 
 void interruptHandler(state_t *stato) {
   // calculates Interrupt Exception Code
@@ -37,21 +38,26 @@ void interruptHandler(state_t *stato) {
 
   default:
     // imòossibile
+    PANIC();
   }
 
   if (IntlineNo == 1)
     handlePLT(stato);
+  else if (IntlineNo == 2)
+    handleIntervalClock(stato);
   else if (IntlineNo >= 3 && IntlineNo <= 7)
     handleDevice(IntlineNo, stato);
 }
 
 void handleDevice(int IntlineNo, state_t *stato) {
+  // inizializzazione di varie variabili
   unsigned int savedStatus = 0;
   pcb_t *unblocked = NULL;
   int DevNo = 0;
   memaddr bitmap = 0x10000040 + 0x04 * (IntlineNo - 3);
   int *sem = NULL;
 
+  // controllo quale istanza del device ha create l'interrupt
   if (bitmap & DEV0ON)
     DevNo = 0;
   else if (bitmap & DEV1ON)
@@ -69,25 +75,40 @@ void handleDevice(int IntlineNo, state_t *stato) {
   else if (bitmap & DEV7ON)
     DevNo = 7;
   else
-    DevNo = -1;
+    // non dovrebbe mai succedere questo case, ma se succede
+    PANIC();
 
+  // calcolo l'indirizzo a cui è istanziato il deviec che ha creato l'interrupt
+  // per poi puntare allo struct interessato
   memaddr devAddr = START_DEVREG + ((IntlineNo - 3) * 0x80) + (DevNo * 0x10);
 
-  if (IntlineNo == 7) // è un terminale
+  int semIndex = 0;
+
+  if (IntlineNo == 7) // il device è un terminale
   {
     termreg_t *termReg = (termreg_t *)devAddr;
     unsigned int transStatus = termReg->transm_status;
     unsigned int recvStatus = termReg->recv_status;
 
+    // controllo che l'operazione sia di output
     if (transStatus == OKCHARTRANS) {
       savedStatus = transStatus;
       termReg->transm_command = ACK;
-      sem = &deviceSemaphore[findDeviceIndex(devAddr)]; // 0xc == transm_command
+      semIndex = findDeviceIndex(devAddr);
+      if (semIndex != -1) // findeDeviceIndex restituisce -1 in caso di errore
+        sem = &deviceSemaphore[semIndex]; // 0xc == transm_command
+      else
+        PANIC();
     }
+    // controllo che l'operazione sia di input
     if (recvStatus == CHARRECV) {
       savedStatus = recvStatus;
       termReg->recv_command = ACK;
-      sem = &deviceSemaphore[findDeviceIndex(devAddr)]; // 0x4 == recv_command
+      semIndex = findDeviceIndex(devAddr);
+      if (semIndex != -1) // findeDeviceIndex restituisce -1 in caso di errore
+        sem = &deviceSemaphore[semIndex]; // 0xc == transm_command
+      else
+        PANIC();
     }
 
     if (sem != NULL)
@@ -97,11 +118,17 @@ void handleDevice(int IntlineNo, state_t *stato) {
       (*sem)++;
     }
   } else {
+    // il device non è un terminale
     dtpreg_t *devReg = (dtpreg_t *)devAddr;
     savedStatus = devReg->status;
     devReg->command = ACK;
 
-    sem = &deviceSemaphore[findDeviceIndex(devAddr)];
+    semIndex = findDeviceIndex(devAddr);
+    if (semIndex != -1) // findeDeviceIndex restituisce -1 in caso di errore
+      sem = &deviceSemaphore[semIndex]; // 0xc == transm_command
+    else
+      PANIC();
+
     unblocked = removeBlocked(sem);
   }
 
@@ -120,17 +147,23 @@ void handleDevice(int IntlineNo, state_t *stato) {
 }
 
 void handlePLT(state_t *stato) {
+  // ACK dell'interrupt
   setTIMER(TIMESLICE);
 
+  // salvo lo stato della cpu nel p_s del processo da sbloccare
   copyState(&currentProcess->p_s, stato);
 
+  // inserisco il processo in readyQueue
   insertProcQ(&readyQueue, currentProcess);
   scheduler();
 }
 
 void handleIntervalClock(state_t *stato) {
+  // ACK dell'interrupt
   LDIT(PSECOND);
 
+  // sblocco tutti i processi che aspettano uno PseudoClock Tick
+  // e li sposto nella readyQueue
   pcb_t *p = NULL;
   for (int c = 0; c < deviceSemaphore[PSEUDOINDEX]; c++) {
     p = removeBlocked(&deviceSemaphore[PSEUDOINDEX]);
