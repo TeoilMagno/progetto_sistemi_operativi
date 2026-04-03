@@ -91,8 +91,8 @@ void handleDevice(int IntlineNo, state_t *stato) {
     unsigned int recvStatus = termReg->recv_status;
 
     // controllo che l'operazione sia di output
-    if (transStatus == OKCHARTRANS) {
-      savedStatus = transStatus;
+    if (transStatus == (OKCHARTRANS & 0xff)) {
+      savedStatus = transStatus & 0xff;
       termReg->transm_command = ACK;
       semIndex = findDeviceIndex(devAddr);
       if (semIndex != -1) // findeDeviceIndex restituisce -1 in caso di errore
@@ -101,8 +101,8 @@ void handleDevice(int IntlineNo, state_t *stato) {
         PANIC();
     }
     // controllo che l'operazione sia di input
-    if (recvStatus == CHARRECV) {
-      savedStatus = recvStatus;
+    if (recvStatus == (CHARRECV & 0xff)) {
+      savedStatus = recvStatus & 0xff;
       termReg->recv_command = ACK;
       semIndex = findDeviceIndex(devAddr);
       if (semIndex != -1) // findeDeviceIndex restituisce -1 in caso di errore
