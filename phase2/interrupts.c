@@ -84,7 +84,7 @@ void handleDevice(int IntlineNo, state_t *stato) {
       termReg->transm_command = ACK;
       sem = &deviceSemaphore[findDeviceIndex(devAddr)]; // 0xc == transm_command
     }
-    if (recvStatus == RECEIVECHAR) {
+    if (recvStatus == CHARRECV) {
       savedStatus = recvStatus;
       termReg->recv_command = ACK;
       sem = &deviceSemaphore[findDeviceIndex(devAddr)]; // 0x4 == recv_command
