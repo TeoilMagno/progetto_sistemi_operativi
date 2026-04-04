@@ -100,11 +100,14 @@ void syscallHandler(state_t *state) {
   }
   case DOIO: {
     memaddr *commandAddr = (memaddr *)state->reg_a1;
-    int value = state->reg_a2;
+    unsigned int value = state->reg_a2;
     *commandAddr = value;
     int *semPtr = &deviceSemaphore[findDeviceIndex((memaddr)(commandAddr))];
-    (*semPtr)--;
-    insertBlocked(semPtr, currentProcess);
+    if (*semPtr <= 0)
+      insertBlocked(semPtr, currentProcess);
+    else
+      (*semPtr)--;
+
     state->pc_epc += 4;
     copyState(&currentProcess->p_s, state);
     currentProcess->p_time += updateTime(getPRID());
