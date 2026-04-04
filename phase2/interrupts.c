@@ -90,19 +90,8 @@ void handleDevice(int IntlineNo, state_t *stato) {
   if (IntlineNo == 7) // il device è un terminale
   {
     termreg_t *termReg = (termreg_t *)devAddr;
-    unsigned int transStatus = termReg->transm_status;
-    unsigned int recvStatus = termReg->recv_status;
-
-    klog_print("DevNo: ");
-    klog_print_dec(DevNo);
-    klog_print("   devAddr: ");
-    klog_print_hex(devAddr);
-    klog_print("   devSemr: ");
-    klog_print_dec(findDeviceIndex(devAddr));
-    klog_print("   transStatus: ");
-    klog_print_hex(transStatus);
-    klog_print("   recvStatus: ");
-    klog_print_hex(recvStatus);
+    unsigned int transStatus = termReg->transm_status /*& 0xff*/;
+    unsigned int recvStatus = termReg->recv_status /*& 0xff*/;
 
     // controllo che l'operazione sia di output
     if ((transStatus & 0xff) == OKCHARTRANS) {
@@ -110,58 +99,48 @@ void handleDevice(int IntlineNo, state_t *stato) {
       termReg->transm_command = ACK;
       semIndex = findDeviceIndex(devAddr);
       if (semIndex != -1) // findeDeviceIndex restituisce -1 in caso di errore
+      {
         sem = &deviceSemaphore[semIndex]; // 0xc == transm_command
-      else
-        PANIC();
+        unblocked = removeBlocked(sem);
+      }
     }
     // controllo che l'operazione sia di input
-    if ((recvStatus & 0xff) == CHARRECV) {
+    if (recvStatus == CHARRECV) {
       savedStatus = recvStatus;
       termReg->recv_command = ACK;
       semIndex = findDeviceIndex(devAddr);
       if (semIndex != -1) // findeDeviceIndex restituisce -1 in caso di errore
+      {
         sem = &deviceSemaphore[semIndex]; // 0xc == transm_command
-      else
-        PANIC();
+        unblocked = removeBlocked(sem);
+      }
     }
 
-    if (sem != NULL)
-      unblocked = removeBlocked(sem);
-    else // dovrebbe essere impossibile, ma se succede...
-    {
-      (*sem)++;
-    }
   } else {
     // il device non è un terminale
     dtpreg_t *devReg = (dtpreg_t *)devAddr;
     savedStatus = devReg->status;
-    klog_print("   savedStatus: ");
-    klog_print_dec(savedStatus);
     devReg->command = ACK;
 
     semIndex = findDeviceIndex(devAddr);
     if (semIndex != -1) // findeDeviceIndex restituisce -1 in caso di errore
+    {
       sem = &deviceSemaphore[semIndex]; // 0xc == transm_command
-    else
-      PANIC();
-
-    unblocked = removeBlocked(sem);
+      unblocked = removeBlocked(sem);
+    }
   }
 
-  klog_print("devSemr: ");
-  klog_print_dec(findDeviceIndex(devAddr));
-
   if (unblocked != NULL) {
-    unblocked->p_s.reg_a1 = savedStatus;
-    list_add(&unblocked->p_list, &readyQueue);
+    unblocked->p_s.reg_a0 = savedStatus;
+    insertProcQ(&readyQueue, unblocked);
   } else // dovrebbe essere impossibile, ma se succede...
   {
     (*sem)++;
   }
 
-  if (currentProcess != NULL)
+  if (currentProcess != NULL) {
     LDST(stato);
-  else
+  } else
     scheduler();
 }
 

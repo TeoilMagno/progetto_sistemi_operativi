@@ -101,9 +101,7 @@ void syscallHandler(state_t *state) {
   case DOIO: {
     memaddr *commandAddr = (memaddr *)state->reg_a1;
     int value = state->reg_a2;
-    klog_print("exception sem: ");
-    klog_print_dec(findDeviceIndex((memaddr)(commandAddr)));
-    klog_print("        ");
+    *commandAddr = value;
     int *semPtr = &deviceSemaphore[findDeviceIndex((memaddr)(commandAddr))];
     (*semPtr)--;
     insertBlocked(semPtr, currentProcess);
@@ -112,7 +110,6 @@ void syscallHandler(state_t *state) {
     currentProcess->p_time += updateTime(getPRID());
     currentProcess = NULL;
     softBlockCount++;
-    *commandAddr = value;
     scheduler();
     break;
   }
