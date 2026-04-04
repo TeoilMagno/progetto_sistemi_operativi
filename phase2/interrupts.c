@@ -99,16 +99,14 @@ void handleDevice(int IntlineNo, state_t *stato) {
     klog_print_hex(devAddr);
     klog_print("   devSemr: ");
     klog_print_dec(findDeviceIndex(devAddr));
-    // klog_print("   transStatus: ");
-    // klog_print_dec(transStatus);
-    // klog_print("   recvStatus: ");
-    // klog_print_dec(recvStatus);
+    klog_print("   transStatus: ");
+    klog_print_hex(transStatus);
+    klog_print("   recvStatus: ");
+    klog_print_hex(recvStatus);
 
     // controllo che l'operazione sia di output
-    if (transStatus == (OKCHARTRANS & 0xff)) {
-      savedStatus = transStatus & 0xff;
-      klog_print("    savedStatus: ");
-      klog_print_dec(savedStatus);
+    if ((transStatus & 0xff) == OKCHARTRANS) {
+      savedStatus = transStatus;
       termReg->transm_command = ACK;
       semIndex = findDeviceIndex(devAddr);
       if (semIndex != -1) // findeDeviceIndex restituisce -1 in caso di errore
@@ -117,10 +115,8 @@ void handleDevice(int IntlineNo, state_t *stato) {
         PANIC();
     }
     // controllo che l'operazione sia di input
-    if (recvStatus == (CHARRECV & 0xff)) {
-      savedStatus = recvStatus & 0xff;
-      klog_print("    savedStatus: ");
-      klog_print_dec(savedStatus);
+    if ((recvStatus & 0xff) == CHARRECV) {
+      savedStatus = recvStatus;
       termReg->recv_command = ACK;
       semIndex = findDeviceIndex(devAddr);
       if (semIndex != -1) // findeDeviceIndex restituisce -1 in caso di errore
