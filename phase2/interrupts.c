@@ -1,6 +1,7 @@
 #include "./headers/interrupts.h"
 #include "headers/functions.h"
 #include "headers/klog.h"
+#include <stdio.h>
 
 void interruptHandler(state_t *stato) {
   // calculates Interrupt Exception Code
@@ -55,25 +56,26 @@ void handleDevice(int IntlineNo, state_t *stato) {
   unsigned int savedStatus = 0;
   pcb_t *unblocked = NULL;
   int DevNo = 0;
-  memaddr bitmap = 0x10000040 + 0x04 * (IntlineNo - 3);
+  unsigned int word = IntlineNo - 3;
+  memaddr *bitmap = (unsigned int *)0x10000040;
   int *sem = NULL;
 
   // controllo quale istanza del device ha create l'interrupt
-  if (bitmap & DEV0ON)
+  if (bitmap[word] & DEV0ON)
     DevNo = 0;
-  else if (bitmap & DEV1ON)
+  else if (bitmap[word] & DEV1ON)
     DevNo = 1;
-  else if (bitmap & DEV2ON)
+  else if (bitmap[word] & DEV2ON)
     DevNo = 2;
-  else if (bitmap & DEV3ON)
+  else if (bitmap[word] & DEV3ON)
     DevNo = 3;
-  else if (bitmap & DEV4ON)
+  else if (bitmap[word] & DEV4ON)
     DevNo = 4;
-  else if (bitmap & DEV5ON)
+  else if (bitmap[word] & DEV5ON)
     DevNo = 5;
-  else if (bitmap & DEV6ON)
+  else if (bitmap[word] & DEV6ON)
     DevNo = 6;
-  else if (bitmap & DEV7ON)
+  else if (bitmap[word] & DEV7ON)
     DevNo = 7;
   else
     // non dovrebbe mai succedere questo case, ma se succede
@@ -91,9 +93,22 @@ void handleDevice(int IntlineNo, state_t *stato) {
     unsigned int transStatus = termReg->transm_status;
     unsigned int recvStatus = termReg->recv_status;
 
+    klog_print("DevNo: ");
+    klog_print_dec(DevNo);
+    klog_print("   devAddr: ");
+    klog_print_hex(devAddr);
+    klog_print("   devSemr: ");
+    klog_print_dec(findDeviceIndex(devAddr));
+    // klog_print("   transStatus: ");
+    // klog_print_dec(transStatus);
+    // klog_print("   recvStatus: ");
+    // klog_print_dec(recvStatus);
+
     // controllo che l'operazione sia di output
     if (transStatus == (OKCHARTRANS & 0xff)) {
       savedStatus = transStatus & 0xff;
+      klog_print("    savedStatus: ");
+      klog_print_dec(savedStatus);
       termReg->transm_command = ACK;
       semIndex = findDeviceIndex(devAddr);
       if (semIndex != -1) // findeDeviceIndex restituisce -1 in caso di errore
@@ -104,6 +119,8 @@ void handleDevice(int IntlineNo, state_t *stato) {
     // controllo che l'operazione sia di input
     if (recvStatus == (CHARRECV & 0xff)) {
       savedStatus = recvStatus & 0xff;
+      klog_print("    savedStatus: ");
+      klog_print_dec(savedStatus);
       termReg->recv_command = ACK;
       semIndex = findDeviceIndex(devAddr);
       if (semIndex != -1) // findeDeviceIndex restituisce -1 in caso di errore
@@ -111,8 +128,6 @@ void handleDevice(int IntlineNo, state_t *stato) {
       else
         PANIC();
     }
-    klog_print("devAddr: ");
-    klog_print_hex(devAddr);
 
     if (sem != NULL)
       unblocked = removeBlocked(sem);
@@ -124,6 +139,8 @@ void handleDevice(int IntlineNo, state_t *stato) {
     // il device non è un terminale
     dtpreg_t *devReg = (dtpreg_t *)devAddr;
     savedStatus = devReg->status;
+    klog_print("   savedStatus: ");
+    klog_print_dec(savedStatus);
     devReg->command = ACK;
 
     semIndex = findDeviceIndex(devAddr);
@@ -134,6 +151,9 @@ void handleDevice(int IntlineNo, state_t *stato) {
 
     unblocked = removeBlocked(sem);
   }
+
+  klog_print("devSemr: ");
+  klog_print_dec(findDeviceIndex(devAddr));
 
   if (unblocked != NULL) {
     unblocked->p_s.reg_a1 = savedStatus;

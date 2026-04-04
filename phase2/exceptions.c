@@ -1,5 +1,7 @@
 #include "./headers/exceptions.h"
+#include "headers/functions.h"
 #include "headers/klog.h"
+#include <uriscv/types.h>
 
 void syscallHandler(state_t *state);
 
@@ -98,11 +100,11 @@ void syscallHandler(state_t *state) {
   }
   case DOIO: {
     memaddr *commandAddr = (memaddr *)state->reg_a1;
-    klog_print("exception: ");
-    klog_print_hex((*commandAddr));
-    klog_print("            ");
     int value = state->reg_a2;
-    int *semPtr = &deviceSemaphore[findDeviceIndex((*commandAddr - 0x4))];
+    klog_print("exception sem: ");
+    klog_print_dec(findDeviceIndex((memaddr)(commandAddr)));
+    klog_print("        ");
+    int *semPtr = &deviceSemaphore[findDeviceIndex((memaddr)(commandAddr))];
     (*semPtr)--;
     insertBlocked(semPtr, currentProcess);
     state->pc_epc += 4;

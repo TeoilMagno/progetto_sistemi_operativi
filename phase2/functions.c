@@ -36,11 +36,11 @@ int findDeviceIndex(memaddr deviceAddr) {
   // controllo se il device è un terminale, in caso ogni terminale è suddiviso
   // in due subdevice ognuno che occupa 0x8
   if (bottom >= 32 * 0x10)
-    deviceIndex = 32 + (bottom - (32 * 0x10) / 0x8);
-  else // non è un terminale
+    deviceIndex = 32 + (bottom - (32 * 0x10)) / 0x8;
+  else if (bottom >= 0 && bottom < 32 * 0x10) // non è un terminale
     deviceIndex = bottom / 0x10;
 
-  if (deviceIndex < 0 || deviceIndex > 49)
+  if (deviceIndex < 0 || deviceIndex >= 49)
     return -1; // errore dispositivo non valido
 
   return deviceIndex;
