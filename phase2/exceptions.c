@@ -1,5 +1,6 @@
 #include "./headers/exceptions.h"
 #include "headers/functions.h"
+#include "headers/initial.h"
 #include "headers/klog.h"
 #include <uriscv/types.h>
 
@@ -91,6 +92,7 @@ void syscallHandler(state_t *state) {
     pcb_t *unlockedProcess = removeBlocked(semAdd);
     if (unlockedProcess != NULL) {
       insertProcQ(&readyQueue, unlockedProcess);
+      softBlockCount--;
     } else {
       (*semAdd)++;
     }

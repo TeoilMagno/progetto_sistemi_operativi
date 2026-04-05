@@ -1,5 +1,6 @@
 #include "./headers/interrupts.h"
 #include "headers/functions.h"
+#include "headers/initial.h"
 #include "headers/klog.h"
 #include <stdio.h>
 
@@ -133,9 +134,11 @@ void handleDevice(int IntlineNo, state_t *stato) {
   if (unblocked != NULL) {
     unblocked->p_s.reg_a0 = savedStatus;
     insertProcQ(&readyQueue, unblocked);
+    softBlockCount--;
   } else // dovrebbe essere impossibile, ma se succede...
   {
-    (*sem)++;
+    if (semIndex != -1)
+      (*sem)++;
   }
 
   if (currentProcess != NULL) {
@@ -163,9 +166,10 @@ void handleIntervalClock(state_t *stato) {
   // sblocco tutti i processi che aspettano uno PseudoClock Tick
   // e li sposto nella readyQueue
   pcb_t *p = NULL;
-  for (int c = 0; c < deviceSemaphore[PSEUDOINDEX]; c++) {
+  while ((p = removeBlocked(&deviceSemaphore[PSEUDOINDEX])) != NULL) {
     p = removeBlocked(&deviceSemaphore[PSEUDOINDEX]);
     insertProcQ(&readyQueue, p);
+    softBlockCount--;
   }
 
   if (currentProcess != NULL)
