@@ -91,14 +91,12 @@ void handleDevice(int IntlineNo, state_t *stato) {
   if (IntlineNo == 7) // il device è un terminale
   {
     termreg_t *termReg = (termreg_t *)devAddr;
-    unsigned int transStatus = termReg->transm_status & 0xff;
-    unsigned int recvStatus = termReg->recv_status & 0xff;
 
     // controllo che l'operazione sia di output
-    if (transStatus == OKCHARTRANS) {
-      savedStatus = transStatus;
+    if ((termReg->transm_status & 0xff) == OKCHARTRANS) {
+      savedStatus = termReg->transm_status;
       termReg->transm_command = ACK;
-      semIndex = findDeviceIndex(devAddr);
+      semIndex = findDeviceIndex(devAddr + 0x8);
       if (semIndex != -1) // findeDeviceIndex restituisce -1 in caso di errore
       {
         sem = &deviceSemaphore[semIndex]; // 0xc == transm_command
@@ -106,8 +104,8 @@ void handleDevice(int IntlineNo, state_t *stato) {
       }
     }
     // controllo che l'operazione sia di input
-    else if (recvStatus == CHARRECV) {
-      savedStatus = recvStatus;
+    else if ((termReg->recv_status & 0xff) == CHARRECV) {
+      savedStatus = termReg->recv_status;
       termReg->recv_command = ACK;
       semIndex = findDeviceIndex(devAddr);
       if (semIndex != -1) // findeDeviceIndex restituisce -1 in caso di errore
