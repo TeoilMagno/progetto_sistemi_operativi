@@ -4,3 +4,20 @@ p2 starts
 p2 v's successfully
 p2 is OK
 p3 is started
+p3 - CLOCKWAIT OK
+p3 - CPU time correctly maintained
+hp_p1 starts
+hp_p2 starts
+first incarnation of p4 starts
+p5 starts
+p6 starts
+p7 starts
+p9 starts
+hp_p1 ends
+hp_p2 ends
+second incarnation of p4 starts
+Bus Error (as expected): Access non-existent memory
+p10 starts
+p4 is OK
+memory management trap
+p5 sbloccato???

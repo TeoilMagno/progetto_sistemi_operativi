@@ -126,8 +126,11 @@ void syscallHandler(state_t *state) {
     break;
   }
   case CLOCKWAIT: {
-    int *pseudoClock = &deviceSemaphore[47];
-    insertBlocked(pseudoClock, currentProcess);
+    int *pseudoClock = &deviceSemaphore[PSEUDOINDEX];
+    if (*pseudoClock <= 0)
+      insertBlocked(pseudoClock, currentProcess);
+    else
+      (*pseudoClock)--;
     state->pc_epc += 4;
     copyState(&currentProcess->p_s, state);
     currentProcess->p_time += updateTime(getPRID());

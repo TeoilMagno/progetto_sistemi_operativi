@@ -165,7 +165,6 @@ void handleIntervalClock(state_t *stato) {
   // e li sposto nella readyQueue
   pcb_t *p = NULL;
   while ((p = removeBlocked(&deviceSemaphore[PSEUDOINDEX])) != NULL) {
-    p = removeBlocked(&deviceSemaphore[PSEUDOINDEX]);
     insertProcQ(&readyQueue, p);
     softBlockCount--;
   }
