@@ -121,6 +121,7 @@ pcb_t *outBlocked(pcb_t *p) {
     semd_t *item = container_of(iter, semd_t, s_link);
     if (item->s_key == p->p_semAdd) {
       pcb_t *pout = outProcQ(&item->s_procq, p);
+      pout->p_semAdd = NULL;
 
       if (list_empty(&item->s_procq)) {
         list_del(&item->s_link);

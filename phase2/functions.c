@@ -65,20 +65,16 @@ pcb_t *findProcess(int pid) {
 
 void killProcess(pcb_t *pcb) {
   if (pcb != NULL) {
-    struct list_head *iter;
-    if (!list_empty(&pcb->p_child)) {
-      list_for_each(iter, &pcb->p_child) {
-        pcb_t *item = container_of(iter, pcb_t, p_list);
-        outProcQ(&pcb->p_child, item);
-        killProcess(item);
-      }
+    while (!emptyChild(pcb)) {
+      pcb_t *tmp = removeChild(pcb);
+      killProcess(tmp);
     }
-    outChild(pcb);
     outProcQ(&readyQueue, pcb);
     if (outBlocked(pcb) != NULL)
       softBlockCount--;
 
     freePcb(pcb);
+    processCount--;
   }
 }
 
