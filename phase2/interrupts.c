@@ -2,7 +2,6 @@
 #include "headers/functions.h"
 #include "headers/initial.h"
 #include "headers/klog.h"
-#include <stdio.h>
 
 void interruptHandler(state_t *stato) {
   // calculates Interrupt Exception Code

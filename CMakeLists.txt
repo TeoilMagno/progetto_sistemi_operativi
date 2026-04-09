@@ -1,13 +1,24 @@
 cmake_minimum_required(VERSION 3.25)
+
+# 1. Diciamo a CMake che stiamo sviluppando un OS (disabilita i test di linking che fallivano)
+set(CMAKE_SYSTEM_NAME Generic)
+set(CMAKE_TRY_COMPILE_TARGET_TYPE STATIC_LIBRARY)
+
 project(MultiPandOS LANGUAGES C ASM)
 
+# 2. Aggiunto il compilatore specifico per Fedora alla ricerca
 find_program(RISCV_GCC_UNKNOWN riscv64-unknown-elf-gcc)
 find_program(RISCV_GCC riscv64-elf-gcc)
+find_program(RISCV_GCC_LINUX riscv64-linux-gnu-gcc)
+
 if(RISCV_GCC_UNKNOWN)
     set(XT_PRG_PREFIX riscv64-unknown-elf-)
 elseif(RISCV_GCC)
     set(XT_PRG_PREFIX riscv64-elf-)
+elseif(RISCV_GCC_LINUX)
+    set(XT_PRG_PREFIX riscv64-linux-gnu-)
 endif()
+
 set(URISCV_SRC /usr/local/share/uriscv)
 if(EXISTS "/usr/include/uriscv")
     set(URISCV_INC /usr/include)
@@ -15,6 +26,7 @@ elseif(EXISTS "/usr/local/include/uriscv")
     set(URISCV_INC /usr/local/include)
 endif()
 
+# Ora il prefisso sarà corretto e userà riscv64-linux-gnu-gcc
 set(CMAKE_C_COMPILER ${XT_PRG_PREFIX}gcc)
 set(CMAKE_ASM_COMPILER ${XT_PRG_PREFIX}gcc)
 set(CMAKE_C_LINKER ${XT_PRG_PREFIX}ld)
@@ -32,4 +44,3 @@ add_custom_target(
 	BYPRODUCTS MultiPandOS.core.uriscv MultiPandOS.stab.uriscv
 	DEPENDS MultiPandOS
 )
-

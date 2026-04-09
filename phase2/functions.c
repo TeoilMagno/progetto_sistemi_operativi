@@ -65,19 +65,26 @@ pcb_t *findProcess(int pid) {
 
 void killProcess(pcb_t *pcb) {
   if (pcb != NULL) {
-    struct list_head *iter;
-    if (!list_empty(&pcb->p_child)) {
-      list_for_each(iter, &pcb->p_child) {
-        pcb_t *item = container_of(iter, pcb_t, p_list);
-        outProcQ(&pcb->p_child, item);
-        killProcess(item);
-      }
+    // 1. Termina ricorsivamente tutti i figli usando un while
+    while (!emptyChild(pcb)) {
+      killProcess(removeChild(pcb));
     }
-    outChild(pcb);
-    outProcQ(&readyQueue, pcb);
-    if (outBlocked(pcb) != NULL)
-      softBlockCount--;
 
+    // 2. Rimuove il processo dal suo genitore
+    outChild(pcb);
+
+    // 3. Rimuove il processo dalla readyQueue (se è lì)
+    outProcQ(&readyQueue, pcb);
+
+    // 4. Rimuove il processo dai semafori (se era bloccato)
+    if (outBlocked(pcb) != NULL) {
+      softBlockCount--;
+    }
+
+    // 5. Decrementa il numero di processi attivi (FONDAMENTALE!)
+    processCount--;
+
+    // 6. Libera il PCB
     freePcb(pcb);
   }
 }
