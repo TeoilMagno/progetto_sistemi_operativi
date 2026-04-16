@@ -78,7 +78,6 @@ void syscallHandler(state_t *state) {
       copyState(&currentProcess->p_s, state);
       currentProcess->p_time += updateTime(getPRID());
       currentProcess = NULL;
-      softBlockCount++;
       scheduler();
     } else {
       (*semAdd)--;
@@ -92,7 +91,6 @@ void syscallHandler(state_t *state) {
     pcb_t *unlockedProcess = removeBlocked(semAdd);
     if (unlockedProcess != NULL) {
       insertProcQ(&readyQueue, unlockedProcess);
-      softBlockCount--;
     } else {
       (*semAdd)++;
     }
