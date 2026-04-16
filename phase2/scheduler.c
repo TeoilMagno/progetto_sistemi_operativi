@@ -24,6 +24,10 @@ void scheduler() {
       PANIC();
   } else // se la readyQueue non è vuota
   {
+    klog_print(" processCount: ");
+    klog_print_dec(processCount);
+    klog_print(" softBlockCount: ");
+    klog_print_dec(softBlockCount);
     // Estrae il primo pcb da readyQueue che diventa il processo in esecuzione
     // sulla CPU
     currentProcess = removeProcQ(&readyQueue);
