@@ -65,16 +65,36 @@ pcb_t *findProcess(int pid) {
 
 void killProcess(pcb_t *pcb) {
   if (pcb != NULL) {
+    // 1. Termina ricorsivamente tutti i figli usando un while
     while (!emptyChild(pcb)) {
-      pcb_t *tmp = removeChild(pcb);
-      killProcess(tmp);
+      killProcess(removeChild(pcb));
     }
-    outProcQ(&readyQueue, pcb);
-    if (outBlocked(pcb) != NULL)
-      softBlockCount--;
 
-    freePcb(pcb);
+    // 2. Rimuove il processo dal suo genitore
+    outChild(pcb);
+
+    // 3. Controllo se il processo è fermo su un semaforo
+    if(pcb->p_semAdd!=NULL)
+    {
+      // 3.1 Se il semaforo corrisponde a quello dello PSEUDOCLOCK diminuisco il softBlockCount
+      if(pcb->p_semAdd==&deviceSemaphore[PSEUDOINDEX])
+        softBlockCount--;
+
+      // 3.2 Libero dal semaforo
+      outBlocked(pcb);
+    }
+    // 4 Se il processo non è bloccato sul semaforo o è in stato Ready o Running
+    else
+    {
+      // 4.1 in caso lo tolgo dalla readyQueue
+      outProcQ(&readyQueue, pcb);
+    }
+
+    // 5. Decrementa il numero di processi attivi (FONDAMENTALE!)
     processCount--;
+
+    // 6. Libera il PCB
+    freePcb(pcb);
   }
 }
 

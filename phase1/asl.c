@@ -95,6 +95,9 @@ pcb_t *removeBlocked(int *semAdd) {
         list_add(iter, &semdFree_h);
       }
 
+      if(p!=NULL)
+        p->p_semAdd=NULL;
+
       return p;
     }
   }
@@ -127,6 +130,9 @@ pcb_t *outBlocked(pcb_t *p) {
         list_del(&item->s_link);
         list_add(&item->s_link, &semdFree_h);
       }
+
+      if(pout!=NULL)
+        pout->p_semAdd=NULL;
 
       return pout;
     }

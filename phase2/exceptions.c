@@ -61,12 +61,25 @@ void syscallHandler(state_t *state) {
     break;
   }
   case TERMPROCESS: {
+    pcb_t *target;
     if (state->reg_a1 == 0) {
-      killProcess(currentProcess);
-      scheduler();
+      target = currentProcess;
     } else {
-      killProcess(findProcess(state->reg_a1));
-      scheduler();
+      target = findProcess(state->reg_a1);
+    }
+
+    if (target != NULL) {
+        killProcess(target);
+    }
+
+    // Se abbiamo appena ucciso il processo in esecuzione, passiamo al prossimo
+    if (target == currentProcess) {
+        currentProcess = NULL;
+        scheduler();
+    } else {
+        // Altrimenti il processo corrente deve continuare la sua esecuzione!
+        state->pc_epc += 4;
+        LDST(state);
     }
     break;
   }
