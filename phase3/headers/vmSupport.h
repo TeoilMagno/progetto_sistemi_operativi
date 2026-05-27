@@ -6,7 +6,14 @@
 #include "../../phase1/headers/asl.h"
 #include "../../phase1/headers/pcb.h"
 #include "../../headers/klog.h"
+#include "./const.h"
 #include <uriscv/cpu.h>
 #include <uriscv/liburiscv.h>
+
+int swapPoolSemaphore;
+static int frameIndex;
+
+void TLB_exceptionHandler();
+int pageReplacement();
 
 #endif
