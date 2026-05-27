@@ -1,7 +1,4 @@
 #include "./headers/functions.h"
-#include "headers/initial.h"
-#include "headers/klog.h"
-#include <uriscv/const.h>
 
 // evita problemi di compilazione dove  gcc prova ad usare memcpy per copiare
 // uno struct d tipo state_t da una variabile all'altra

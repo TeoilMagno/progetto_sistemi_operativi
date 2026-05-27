@@ -1,6 +1,5 @@
 #include "./headers/scheduler.h"
 #include "headers/initial.h"
-#include "headers/klog.h"
 
 extern cpu_t startTime[NCPU];
 

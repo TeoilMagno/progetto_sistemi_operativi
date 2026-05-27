@@ -1,8 +1,4 @@
 #include "./headers/exceptions.h"
-#include "headers/functions.h"
-#include "headers/initial.h"
-#include "headers/klog.h"
-#include <uriscv/types.h>
 
 void syscallHandler(state_t *state);
 
@@ -203,4 +199,11 @@ void passUpOrDie(int index, state_t *exceptionState) {
         &(currentProcess->p_supportStruct->sup_exceptContext[index]);
     LDCXT(ctx->stackPtr, ctx->status, ctx->pc);
   }
+}
+
+void uTLB_RefillHandler() {
+  setENTRYHI(0x80000000);
+  setENTRYLO(0x00000000);
+  TLBWR();
+  LDST((state_t*) BIOSDATAPAGE);
 }

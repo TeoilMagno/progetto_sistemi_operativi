@@ -1,15 +1,12 @@
-#ifndef SCHEDULER
-#define SCHEDULER
+#ifndef SYS_SUPPORT
+#define SYS_SUPPORT
 
 #include "../../headers/listx.h"
 #include "../../headers/types.h"
-#include "../../headers/klog.h"
 #include "../../phase1/headers/asl.h"
 #include "../../phase1/headers/pcb.h"
-#include "./initial.h"
+#include "../../headers/klog.h"
+#include <uriscv/cpu.h>
 #include <uriscv/liburiscv.h>
-#include "./functions.h"
-
-void scheduler();
 
 #endif

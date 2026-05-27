@@ -8,6 +8,7 @@
 #include "./initial.h"
 #include <uriscv/cpu.h>
 #include <uriscv/liburiscv.h>
+#include <uriscv/const.h>
 
 void copyState(state_t *dep, state_t *arr);
 

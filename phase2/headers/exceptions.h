@@ -8,7 +8,7 @@
 #include "./functions.h"
 #include "./initial.h"
 #include "./interrupts.h"
-#include "./klog.h"
+#include "../../headers/klog.h"
 #include <uriscv/cpu.h>
 #include <uriscv/liburiscv.h>
 
@@ -16,5 +16,6 @@ extern cpu_t startTime[NCPU];
 
 void exceptionHandler();
 void passUpOrDie(int index, state_t *exceptionState);
+void uTLB_RefillHandler();
 
 #endif
