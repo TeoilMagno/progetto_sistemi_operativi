@@ -1,44 +1,12 @@
 #include "./headers/interrupts.h"
+#include <uriscv/liburiscv.h>
 
-void interruptHandler(state_t *stato) {
+void interruptHandler(state_t *stato)
+{
   // calculates Interrupt Exception Code
   // see Table 1: Interrupt Line and Device Class Mapping
   // in specs
-  int IntlineNo = 0;
-
-  switch (getCAUSE() & CAUSE_EXCCODE_MASK) {
-  case IL_CPUTIMER:
-    IntlineNo = 1;
-    break;
-
-  case IL_TIMER:
-    IntlineNo = 2;
-    break;
-
-  case IL_DISK:
-    IntlineNo = 3;
-    break;
-
-  case IL_FLASH:
-    IntlineNo = 4;
-    break;
-
-  case IL_ETHERNET:
-    IntlineNo = 5;
-    break;
-
-  case IL_PRINTER:
-    IntlineNo = 6;
-    break;
-
-  case IL_TERMINAL:
-    IntlineNo = 7;
-    break;
-
-  default:
-    // imòossibile
-    PANIC();
-  }
+  int IntlineNo = calcIntLineNo(getCAUSE());
 
   if (IntlineNo == 1)
     handlePLT(stato);
@@ -48,39 +16,16 @@ void interruptHandler(state_t *stato) {
     handleDevice(IntlineNo, stato);
 }
 
-void handleDevice(int IntlineNo, state_t *stato) {
+void handleDevice(int IntlineNo, state_t *stato)
+{
   // inizializzazione di varie variabili
   unsigned int savedStatus = 0;
   pcb_t *unblocked = NULL;
-  int DevNo = 0;
-  unsigned int word = IntlineNo - 3;
-  memaddr *bitmap = (unsigned int *)0x10000040;
   int *sem = NULL;
-
-  // controllo quale istanza del device ha create l'interrupt
-  if (bitmap[word] & DEV0ON)
-    DevNo = 0;
-  else if (bitmap[word] & DEV1ON)
-    DevNo = 1;
-  else if (bitmap[word] & DEV2ON)
-    DevNo = 2;
-  else if (bitmap[word] & DEV3ON)
-    DevNo = 3;
-  else if (bitmap[word] & DEV4ON)
-    DevNo = 4;
-  else if (bitmap[word] & DEV5ON)
-    DevNo = 5;
-  else if (bitmap[word] & DEV6ON)
-    DevNo = 6;
-  else if (bitmap[word] & DEV7ON)
-    DevNo = 7;
-  else
-    // non dovrebbe mai succedere questo case, ma se succede
-    PANIC();
 
   // calcolo l'indirizzo a cui è istanziato il deviec che ha creato l'interrupt
   // per poi puntare allo struct interessato
-  memaddr devAddr = START_DEVREG + ((IntlineNo - 3) * 0x80) + (DevNo * 0x10);
+  memaddr devAddr = calcDevAddr(IntlineNo);
 
   int semIndex = 0;
 
@@ -89,7 +34,8 @@ void handleDevice(int IntlineNo, state_t *stato) {
     termreg_t *termReg = (termreg_t *)devAddr;
 
     // controllo che l'operazione sia di output
-    if ((termReg->transm_status & 0xff) == OKCHARTRANS) {
+    if ((termReg->transm_status & 0xff) == OKCHARTRANS)
+    {
       savedStatus = termReg->transm_status;
       termReg->transm_command = ACK;
       semIndex = findDeviceIndex(devAddr + 0x8);
@@ -100,7 +46,8 @@ void handleDevice(int IntlineNo, state_t *stato) {
       }
     }
     // controllo che l'operazione sia di input
-    else if ((termReg->recv_status & 0xff) == CHARRECV) {
+    else if ((termReg->recv_status & 0xff) == CHARRECV)
+    {
       savedStatus = termReg->recv_status;
       termReg->recv_command = ACK;
       semIndex = findDeviceIndex(devAddr);
@@ -125,23 +72,28 @@ void handleDevice(int IntlineNo, state_t *stato) {
     }
   }
 
-  if (unblocked != NULL) {
+  if (unblocked != NULL)
+  {
     unblocked->p_s.reg_a0 = savedStatus;
     insertProcQ(&readyQueue, unblocked);
     softBlockCount--;
-  } else // dovrebbe essere impossibile, ma se succede...
+  }
+  else // dovrebbe essere impossibile, ma se succede...
   {
     if (semIndex != -1)
       (*sem)++;
   }
 
-  if (currentProcess != NULL) {
+  if (currentProcess != NULL)
+  {
     LDST(stato);
-  } else
+  }
+  else
     scheduler();
 }
 
-void handlePLT(state_t *stato) {
+void handlePLT(state_t *stato)
+{
   // ACK dell'interrupt
   setTIMER(TIMESLICE);
 
@@ -153,14 +105,16 @@ void handlePLT(state_t *stato) {
   scheduler();
 }
 
-void handleIntervalClock(state_t *stato) {
+void handleIntervalClock(state_t *stato)
+{
   // ACK dell'interrupt
   LDIT(PSECOND);
 
   // sblocco tutti i processi che aspettano uno PseudoClock Tick
   // e li sposto nella readyQueue
   pcb_t *p = NULL;
-  while ((p = removeBlocked(&deviceSemaphore[PSEUDOINDEX])) != NULL) {
+  while ((p = removeBlocked(&deviceSemaphore[PSEUDOINDEX])) != NULL)
+  {
     insertProcQ(&readyQueue, p);
     softBlockCount--;
   }
@@ -169,4 +123,75 @@ void handleIntervalClock(state_t *stato) {
     LDST(stato);
   else
     scheduler();
+}
+
+int calcIntLineNo(unsigned int cause)
+{
+  switch (cause & CAUSE_EXCCODE_MASK)
+  {
+    case IL_CPUTIMER:
+      return 1;
+      break;
+
+    case IL_TIMER:
+      return 2;
+      break;
+
+    case IL_DISK:
+      return 3;
+      break;
+
+    case IL_FLASH:
+      return 4;
+      break;
+
+    case IL_ETHERNET:
+      return 5;
+      break;
+
+    case IL_PRINTER:
+      return 6;
+      break;
+
+    case IL_TERMINAL:
+      return 7;
+      break;
+
+    default:
+      // imòossibile
+      PANIC();
+  }
+}
+
+int calcDevNo(int IntlineNo)
+{
+  memaddr *bitmap = (unsigned int *)0x10000040;
+  unsigned int word = IntlineNo - 3;
+
+  // controllo quale istanza del device ha create l'interrupt
+  if (bitmap[word] & DEV0ON)
+    return 0;
+  else if (bitmap[word] & DEV1ON)
+    return 1;
+  else if (bitmap[word] & DEV2ON)
+    return 2;
+  else if (bitmap[word] & DEV3ON)
+    return 3;
+  else if (bitmap[word] & DEV4ON)
+    return 4;
+  else if (bitmap[word] & DEV5ON)
+    return 5;
+  else if (bitmap[word] & DEV6ON)
+    return 6;
+  else if (bitmap[word] & DEV7ON)
+    return 7;
+  else
+    // non dovrebbe mai succedere questo case, ma se succede
+    PANIC();
+}
+
+memaddr calcDevAddr(int IntlineNo)
+{
+  int DevNo = calcDevNo(IntlineNo);
+  return START_DEVREG + ((IntlineNo - 3) * 0x80) + (DevNo * 0x10);
 }

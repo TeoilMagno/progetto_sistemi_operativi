@@ -16,5 +16,8 @@ void interruptHandler(state_t *stato);
 void handleDevice(int IntlineNo, state_t *stato);
 void handlePLT(state_t *stato);
 void handleIntervalClock(state_t *stato);
+int calcIntLineNo(unsigned int cause);
+int calcDevNo(int IntlineNo);
+memaddr calcDevAddr(int IntlineNo);
 
 #endif
