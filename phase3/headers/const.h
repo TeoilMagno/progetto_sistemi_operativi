@@ -6,4 +6,6 @@
 #define VALIDOFF 0xFFFFFDFF
 #define GLOBALOFF 0xFFFFFEFF
 
+#define EXC_TLBMOD 24
+
 #endif
