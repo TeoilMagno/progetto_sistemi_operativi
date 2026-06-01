@@ -1,4 +1,6 @@
 #include "./headers/vmSupport.h"
+#include <uriscv/liburiscv.h>
+#include <uriscv/types.h>
 
 extern swap_t swap_pool[POOLSIZE];
 
@@ -27,13 +29,21 @@ void pager()
     int p = findPageIndex( state->entry_hi);
     pteEntry_t *page = &sup->sup_privatePgTbl[p];
 
-    swap_t *frame = &swap_pool[pageReplacement()];
+    int pfn = pageReplacement();
+    swap_t *frame = &swap_pool[pfn];
     
     if(frame->sw_asid == -1) //il frame è libero
     {
-      frame->sw_asid = sup->sup_asid;
-      frame->sw_pageNo = p;
-      frame->sw_pte = page;
+
+      unsigned int asid = (unsigned int)(page->pte_entryHI & 0x00000fff);
+      dtpreg_t *devReg =(dtpreg_t *) ((memaddr) DEV_REG_ADDR(IL_FLASH, asid-1));
+      devReg->data0 = (memaddr) frame;
+      int status = SYSCALL(DOIO, (int)devReg->command, (int)(FLASHREAD << 8), 0);
+      
+      if((status && 0xff) == 5)
+      {
+        //program trap exception handler
+      }
     }
     else //il frame è occupato
     {
@@ -65,13 +75,39 @@ void pager()
       unsigned int asid = (unsigned int)(ptu->pte_entryHI & 0x00000fff);
       dtpreg_t *devReg =(dtpreg_t *) ((memaddr) DEV_REG_ADDR(IL_FLASH, asid-1));
       devReg->data0 = (memaddr) frame;
-      SYSCALL(DOIO, (int)devReg->command, (int)FLASHWRITE, 0);
+      int status = SYSCALL(DOIO, (int)devReg->command, (int)(FLASHWRITE << 8), 0);
 
-      asid = (unsigned int)(page->pte_entryHI & 0x00000fff);
-      devReg =(dtpreg_t *) ((memaddr) DEV_REG_ADDR(IL_FLASH, asid-1));
-      devReg->data0 = (memaddr) frame;
-      SYSCALL(DOIO, (int)devReg->command, (int)FLASHREAD, 0);
+      if((status && 0xff) == 4)
+      {
+        //program trap exception handler
+      }
     }
+
+    //carico finalmente la nuova pagina in swap pool
+    frame->sw_asid = sup->sup_asid;
+    frame->sw_pageNo = p;
+    frame->sw_pte = page;
+
+    //la nuova pagina è valida
+    page->pte_entryLO = page->pte_entryLO | VALIDON;
+    //update del pfn senza variare i flags
+    page->pte_entryLO = (page->pte_entryLO & 0xf) | (pfn << 4);
+
+    setENTRYHI(page->pte_entryHI);
+    TLBP();
+    unsigned int index = getINDEX();
+
+    //se è in cache va aggiornata
+    if(!(index & PRESENTFLAG))
+    {
+      setENTRYLO(page->pte_entryLO);
+      TLBWI();
+    }
+
+    //rilascio mutua esclusione
+    SYSCALL(VERHOGEN, (int)&swapPoolSemaphore, 0, 0);
+
+    LDST(state);
   }
 }
 
