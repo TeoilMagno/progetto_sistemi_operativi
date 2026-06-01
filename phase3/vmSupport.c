@@ -34,13 +34,12 @@ void pager()
     
     if(frame->sw_asid == -1) //il frame è libero
     {
-
       unsigned int asid = (unsigned int)(page->pte_entryHI & 0x00000fff);
       dtpreg_t *devReg =(dtpreg_t *) ((memaddr) DEV_REG_ADDR(IL_FLASH, asid-1));
       devReg->data0 = (memaddr) frame;
       int status = SYSCALL(DOIO, (int)devReg->command, (int)(FLASHREAD << 8), 0);
       
-      if((status && 0xff) == 5)
+      if((status & 0xff) == 5)
       {
         //program trap exception handler
       }
@@ -77,7 +76,7 @@ void pager()
       devReg->data0 = (memaddr) frame;
       int status = SYSCALL(DOIO, (int)devReg->command, (int)(FLASHWRITE << 8), 0);
 
-      if((status && 0xff) == 4)
+      if((status & 0xff) == 4)
       {
         //program trap exception handler
       }
