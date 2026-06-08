@@ -48,12 +48,6 @@ int main() {
     p->p_s.status = MSTATUS_MPIE_MASK | MSTATUS_MPP_M;
     RAMTOP(p->p_s.reg_sp);
     p->p_s.pc_epc = (memaddr)test;
-    p->p_parent = NULL;
-    INIT_LIST_HEAD(&p->p_child);
-    INIT_LIST_HEAD(&p->p_sib);
-    p->p_time = 0;
-    p->p_semAdd = NULL;
-    p->p_supportStruct = NULL;
     // Inserimento del processo in coda
     insertProcQ(&readyQueue, p);
   } else { // se è presente un errore il sistema si ferma
