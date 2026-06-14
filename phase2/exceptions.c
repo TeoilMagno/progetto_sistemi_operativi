@@ -208,11 +208,18 @@ void syscallHandler(state_t *state)
     }
     case YIELD:
     {
-      insertProcQ(&readyQueue, currentProcess);
       state->pc_epc += 4;
       copyState(&currentProcess->p_s, state);
       currentProcess->p_time += updateTime(getPRID());
+      pcb_t *yielded = currentProcess;
       currentProcess = NULL;
+
+      if (list_empty(&readyQueue)) {
+        insertProcQ(&readyQueue, yielded);
+      } else {
+        list_add_tail(&yielded->p_list, &readyQueue);
+      }
+      
       scheduler();
       break;
     }
