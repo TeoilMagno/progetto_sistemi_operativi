@@ -27,7 +27,7 @@ void scheduler() {
     // sulla CPU
     currentProcess = removeProcQ(&readyQueue);
     // Timer di 5 ms allo scadere del quale genera un interrupt
-    setTIMER(TIMESLICE*TIMESCALEADDR);
+    setTIMER(TIMESLICE* (*(cpu_t *)TIMESCALEADDR));
     LDST(&(currentProcess->p_s));
   }
 }
