@@ -1,5 +1,5 @@
 # COMPILAZIONE
-compilare correttamente i vari file .c in questa cartella eseguir
+compilare correttamente i vari file .c in questa cartella eseguire
 ```bash
 make
 ```

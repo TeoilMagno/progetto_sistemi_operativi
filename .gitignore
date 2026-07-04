@@ -1,4 +1,4 @@
 CMakeLists.txt
 build/
 dirconsegna.txt
-"term0.uriscv"
+*.uriscv

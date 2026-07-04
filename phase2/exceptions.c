@@ -252,20 +252,22 @@ void passUpOrDie(int index, state_t *exceptionState) {
   }
 }
 
-// void uTLB_RefillHandler()
-// {
-//   //trovo il numero della pagina non salvata come TLB entry
-//   state_t *saved_state = (state_t *) ((memaddr *) BIOSDATAPAGE);
-//   //salvo il numero di pagine
-//   int p = saved_state->entry_hi;
-//   //cerco la pagina all'interno della SupportStructure del current process e la salvo
-//   pteEntry_t page = currentProcess->p_supportStruct->sup_privatePgTbl[p];
-//
-//   //carico questa pagine nelle TLB entry
-//   setENTRYHI(page.pte_entryHI);
-//   setENTRYLO(page.pte_entryLO);
-//   TLBWR();
-//
-//   //ritorno il controllo al currentProcess
-//   LDST((state_t*) BIOSDATAPAGE);
-// }
+void uTLB_RefillHandler()
+{
+  //all'inizio della BIOS data page si trova una 37 word area contenente
+  //l'exception state salvato, qui in EntryHi si trova il numero della pagina da caricare
+  //trovo il numero della pagina non salvata come TLB entry
+  state_t *saved_state = (state_t *) ((memaddr *) BIOSDATAPAGE); 
+  //salvo il numero di pagine
+  int p = saved_state->entry_hi >> VPNSHIFT;
+  //cerco la pagina all'interno della SupportStructure del current process e la salvo
+  pteEntry_t page = currentProcess->p_supportStruct->sup_privatePgTbl[p];
+
+  //carico questa pagine nelle TLB entry
+  setENTRYHI(page.pte_entryHI);
+  setENTRYLO(page.pte_entryLO);
+  TLBWR();
+
+  //ritorno il controllo al currentProcess
+  LDST(saved_state);
+}
