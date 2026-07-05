@@ -1,12 +1,73 @@
 #include "./headers/vmSupport.h"
-#include <uriscv/liburiscv.h>
-#include <uriscv/types.h>
 
 extern swap_t swap_pool[POOLSIZE];
 
 //semaforo per avere mutua esclusione sull'accesso alla swap pool
 extern int swapPoolSemaphore;
 static int frameIndex=0;
+
+void readFromDevice(pteEntry_t *page, swap_t *frame, int p)
+{
+  //ottengo l'ASID del processo che ha causato il page fault
+  unsigned int asid = (unsigned int)((page->pte_entryHI & 0x00000fff) >> ASIDSHIFT);
+  //grazie all'ASID ottengo il puntatore al device col processo che ha causato il page fault
+  dtpreg_t *devReg =(dtpreg_t *) ((memaddr) DEV_REG_ADDR(IL_FLASH, asid-1));
+  //prepare ll'operazione di read
+  //in uriscv read e write vengono effettuate per DMA
+  //quindi indico in data0 l'indirizzo fisico in cui scrivere la pagina p del device
+  devReg->data0 = (memaddr) frame;
+  //indico quale paina deve essere letta e preparo il comando per la read
+  int readCommand = (p << 8) | FLASHREAD;
+  int status = SYSCALL(DOIO, (int)devReg->command, (int)readCommand, 0);
+
+  if((status & 0xff) == 5)
+  {
+    //program trap exception handler
+  }
+}
+
+void writeToDevicce(swap_t *frame)
+{
+  //inizio azione atomica
+  //disabilito gli interrupts
+  setSTATUS(getSTATUS() & ~MSTATUS_MIE_MASK);
+
+  pteEntry_t *ptu = frame->sw_pte; //Page To Update
+  //aggiornando la pagina già occupante il frame
+  ptu->pte_entryLO = (ptu->pte_entryLO) & VALIDOFF;
+
+  //controllo se la pagine è nella cache della TLB
+  setENTRYHI(ptu->pte_entryHI);
+  TLBP();
+  unsigned int index = getINDEX();
+
+  //se è in cache va aggiornata
+  if(!(index & PRESENTFLAG))
+  {
+    setENTRYLO(ptu->pte_entryLO);
+    TLBWI();
+  }
+
+  //riabilito gli interrupts, fine azione atomica
+  setSTATUS(getSTATUS() | MSTATUS_MIE_MASK);
+  //fine azione atomica
+
+  //aggiorno il backing store del vecchio processo con il nuovo frame
+  //ottengo l'ASID del processo di cui scarico il frame
+  unsigned int asid = frame->sw_asid;
+  //grazie all'ASID ottengo il puntatore al device col processo che ha causato il page fault
+  dtpreg_t *devReg =(dtpreg_t *) ((memaddr) DEV_REG_ADDR(IL_FLASH, asid-1));
+  //quindi indico in data0 l'indirizzo fisico da copiare nella pagina p del device
+  devReg->data0 = (memaddr) frame;
+  //indico quale paina deve essere letta e preparo il comando per la read
+  int writeCommand = (frame->sw_pageNo << 8) | FLASHWRITE;
+  int status = SYSCALL(DOIO, (int)devReg->command, (int) writeCommand, 0);
+
+  if((status & 0xff) == 4)
+  {
+    //program trap exception handler
+  }
+}
 
 void pager()
 {
@@ -18,7 +79,7 @@ void pager()
     unsigned int cause = state->cause;
     unsigned int excCode = (cause & GETEXECCODE) >> CAUSESHIFT;
 
-    if(excCode == EXC_TLBMOD)
+    if(excCode == TLBINVLDMOD)
     {
       //programTrapHandler(sup);
       return;
@@ -29,59 +90,21 @@ void pager()
     int p = findPageIndex( state->entry_hi);
     pteEntry_t *page = &sup->sup_privatePgTbl[p];
 
-    int pfn = pageReplacement();
-    swap_t *frame = &swap_pool[pfn];
+    int fi = pageReplacement(); // frameIndex
+    swap_t *frame = &swap_pool[fi];
     
-    if(frame->sw_asid == -1) //il frame è libero
+    if(frame->sw_asid != -1) //il frame è occupato
     {
-      unsigned int asid = (unsigned int)(page->pte_entryHI & 0x00000fff);
-      dtpreg_t *devReg =(dtpreg_t *) ((memaddr) DEV_REG_ADDR(IL_FLASH, asid-1));
-      devReg->data0 = (memaddr) frame;
-      int status = SYSCALL(DOIO, (int)devReg->command, (int)(FLASHREAD << 8), 0);
-      
-      if((status & 0xff) == 5)
-      {
-        //program trap exception handler
-      }
-    }
-    else //il frame è occupato
-    {
-      //inizio azione atomica
-      //disabilito gli interrupts
-      setSTATUS(getSTATUS() & ~MSTATUS_MIE_MASK);
-
-      pteEntry_t *ptu = frame->sw_pte; //Page To Update
-      //aggiornando la pagina già occupante il frame
-      ptu->pte_entryLO = (ptu->pte_entryLO) & VALIDOFF;
-
-      //controllo se la pagine è nella cache della TLB
-      setENTRYHI(ptu->pte_entryHI);
-      TLBP();
-      unsigned int index = getINDEX();
-
-      //se è in cache va aggiornata
-      if(!(index & PRESENTFLAG))
-      {
-        setENTRYLO(ptu->pte_entryLO);
-        TLBWI();
-      }
-
-      //riabilito gli interrupts
-      setSTATUS(getSTATUS() | MSTATUS_MIE_MASK);
-      //fine azione atomica
-      
-      //aggiorno il backing store del vecchio processo con il nuovo frame
-      unsigned int asid = (unsigned int)(ptu->pte_entryHI & 0x00000fff);
-      dtpreg_t *devReg =(dtpreg_t *) ((memaddr) DEV_REG_ADDR(IL_FLASH, asid-1));
-      devReg->data0 = (memaddr) frame;
-      int status = SYSCALL(DOIO, (int)devReg->command, (int)(FLASHWRITE << 8), 0);
-
-      if((status & 0xff) == 4)
-      {
-        //program trap exception handler
-      }
+      //il frame è occupato, quindi lo scarico sulla memoria del device corrispondente
+      writeToDevicce(frame); 
     }
 
+    //poi vado a scrivere nello stesso frame la pagina richiesta
+    readFromDevice(page, frame, p);
+
+    //inizio azione atomica
+    //disabilito gli interrupts
+    setSTATUS(getSTATUS() & ~MSTATUS_MIE_MASK);
     //carico finalmente la nuova pagina in swap pool
     frame->sw_asid = sup->sup_asid;
     frame->sw_pageNo = p;
@@ -89,19 +112,16 @@ void pager()
 
     //la nuova pagina è valida
     page->pte_entryLO = page->pte_entryLO | VALIDON;
-    //update del pfn senza variare i flags
-    page->pte_entryLO = (page->pte_entryLO & 0xf) | (pfn << 4);
+    //update del fi senza variare i flags
+    page->pte_entryLO = (page->pte_entryLO & 0xf) | (fi << 4);
 
     setENTRYHI(page->pte_entryHI);
-    TLBP();
-    unsigned int index = getINDEX();
+    setENTRYLO(page->pte_entryLO);
+    TLBWI();
 
-    //se è in cache va aggiornata
-    if(!(index & PRESENTFLAG))
-    {
-      setENTRYLO(page->pte_entryLO);
-      TLBWI();
-    }
+    //riabilito gli interrupts, fine azione atomica
+    setSTATUS(getSTATUS() | MSTATUS_MIE_MASK);
+    //fine azione atomica
 
     //rilascio mutua esclusione
     SYSCALL(VERHOGEN, (int)&swapPoolSemaphore, 0, 0);

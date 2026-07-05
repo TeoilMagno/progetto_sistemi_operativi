@@ -4,6 +4,7 @@
 #include "../../headers/listx.h"
 #include "../../headers/types.h"
 #include "../../headers/klog.h"
+#include "headers/const.h"
 #include "./const.h"
 #include <uriscv/cpu.h>
 #include <uriscv/liburiscv.h>

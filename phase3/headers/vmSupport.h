@@ -8,11 +8,13 @@
 #include <uriscv/cpu.h>
 #include <uriscv/liburiscv.h>
 #include <uriscv/arch.h>
+#include <uriscv/types.h>
 
 extern swap_t swap_pool[POOLSIZE];
 extern int swapPoolSemaphore;
 static int frameIndex;
 
+void readFromDevice(pteEntry_t *page, swap_t *frame, int p);
 void pager();
 int pageReplacement();
 

@@ -6,6 +6,7 @@
 #define VALIDOFF 0xFFFFFDFF
 #define GLOBALOFF 0xFFFFFEFF
 
-#define EXC_TLBMOD 24
+#define TLBINVLDMOD 1
+#define STACK_PAGE 0xBFFFF
 
 #endif
