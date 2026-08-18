@@ -8,5 +8,9 @@
 
 #define TLBINVLDMOD 1
 #define STACK_PAGE 0xBFFFF
+#define SHELL_ASID 1
+
+#define READTERMINAL 5
+#define EXECUTE 6
 
 #endif
