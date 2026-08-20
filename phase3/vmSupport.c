@@ -6,6 +6,28 @@ extern swap_t swap_pool[POOLSIZE];
 extern int swapPoolSemaphore;
 static int frameIndex=0;
 
+void initSwapStructs() 
+{
+    int i;
+    for (i = 0; i < POOLSIZE; i++)
+    {
+        swap_pool[i].sw_asid = -1;
+        swap_pool[i].sw_pageNo = -1;
+        swap_pool[i].sw_pte = NULL;
+    }
+}
+
+int findPageIndex(unsigned int pte_entryHI)
+{
+  int vpn = ENTRYHI_GET_VPN(pte_entryHI);
+
+  if(vpn == STACK_PAGE)
+    return USERPGTBLSIZE - 1;
+  else
+    return vpn - 0x80000;
+}
+
+
 void readFromDevice(pteEntry_t *page, swap_t *frame, int p)
 {
   //ottengo l'ASID del processo che ha causato il page fault
@@ -22,11 +44,11 @@ void readFromDevice(pteEntry_t *page, swap_t *frame, int p)
 
   if((status & 0xff) == 5)
   {
-    //program trap exception handler
+    programTrapHandler(asid);
   }
 }
 
-void writeToDevicce(swap_t *frame)
+void writeToDevice(swap_t *frame)
 {
   //inizio azione atomica
   //disabilito gli interrupts
@@ -65,7 +87,7 @@ void writeToDevicce(swap_t *frame)
 
   if((status & 0xff) == 4)
   {
-    //program trap exception handler
+    programTrapHandler(asid);
   }
 }
 
@@ -81,7 +103,7 @@ void pager()
 
     if(excCode == TLBINVLDMOD)
     {
-      //programTrapHandler(sup);
+      programTrapHandler(sup->sup_asid);
       return;
     }
 
@@ -96,7 +118,7 @@ void pager()
     if(frame->sw_asid != -1) //il frame è occupato
     {
       //il frame è occupato, quindi lo scarico sulla memoria del device corrispondente
-      writeToDevicce(frame); 
+      writeToDevice(frame); 
     }
 
     //poi vado a scrivere nello stesso frame la pagina richiesta
