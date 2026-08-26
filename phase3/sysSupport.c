@@ -104,7 +104,7 @@ void generalExceptionHandler()
     support_t *sup = (support_t *) SYSCALL(GETSUPPORTPTR, 0, 0, 0);
     state_t* state = &(sup->sup_exceptState[GENERALEXCEPT]);
     int asid = sup->sup_asid;
-    unsigned int excCode = (state->cause & GETEXECCODE) >> CAUSESHIFT;
+    unsigned int excCode = state->cause & GETEXECCODE;
     if (excCode == 8)
     {
         supportSyscallHandler(state, asid);

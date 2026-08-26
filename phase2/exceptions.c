@@ -1,5 +1,6 @@
 #include "./headers/exceptions.h"
 #include "headers/initial.h"
+#include "../phase3/headers/vmSupport.h"
 #include <uriscv/const.h>
 
 void syscallHandler(state_t *state);
@@ -35,7 +36,8 @@ void exceptionHandler()
 
 void syscallHandler(state_t *state)
 {
-  if ((state->status & MSTATUS_MPP_MASK) == 0) {
+  if ((int)state->reg_a0 < 0 && (state->status & MSTATUS_MPP_MASK) == 0)
+  {
     unsigned int oldCode =
         (state->cause & GETEXECCODE); // Isolo la parte del registro che contine
                                       // il codice errore attuale
@@ -258,8 +260,8 @@ void uTLB_RefillHandler()
   //l'exception state salvato, qui in EntryHi si trova il numero della pagina da caricare
   //trovo il numero della pagina non salvata come TLB entry
   state_t *saved_state = (state_t *) ((memaddr *) BIOSDATAPAGE); 
-  //salvo il numero di pagine
-  int p = saved_state->entry_hi >> VPNSHIFT;
+  //trovo l'indice (0..31) nella page table privata
+  int p = findPageIndex(saved_state->entry_hi);
   //cerco la pagina all'interno della SupportStructure del current process e la salvo
   pteEntry_t page = currentProcess->p_supportStruct->sup_privatePgTbl[p];
 

@@ -1,6 +1,7 @@
 #include "./headers/vmSupport.h"
 
 extern swap_t swap_pool[POOLSIZE];
+static unsigned int swapFrames[POOLSIZE][PAGESIZE / WORDLEN] __attribute__((aligned(PAGESIZE)));
 
 //semaforo per avere mutua esclusione sull'accesso alla swap pool
 extern int swapPoolSemaphore;
@@ -19,7 +20,7 @@ void initSwapStructs()
 
 int findPageIndex(unsigned int pte_entryHI)
 {
-  int vpn = ENTRYHI_GET_VPN(pte_entryHI);
+  unsigned int vpn = pte_entryHI >> VPNSHIFT;
 
   if(vpn == STACK_PAGE)
     return USERPGTBLSIZE - 1;
@@ -34,13 +35,10 @@ void readFromDevice(pteEntry_t *page, swap_t *frame, int p)
   unsigned int asid = (unsigned int)((page->pte_entryHI & 0x00000fff) >> ASIDSHIFT);
   //grazie all'ASID ottengo il puntatore al device col processo che ha causato il page fault
   dtpreg_t *devReg =(dtpreg_t *) ((memaddr) DEV_REG_ADDR(IL_FLASH, asid-1));
-  //prepare ll'operazione di read
-  //in uriscv read e write vengono effettuate per DMA
-  //quindi indico in data0 l'indirizzo fisico in cui scrivere la pagina p del device
-  devReg->data0 = (memaddr) frame;
+  devReg->data0 = (memaddr) swapFrames[frame-swap_pool];
   //indico quale paina deve essere letta e preparo il comando per la read
   int readCommand = (p << 8) | FLASHREAD;
-  int status = SYSCALL(DOIO, (int)devReg->command, (int)readCommand, 0);
+  int status = SYSCALL(DOIO, (int)&(devReg->command), (int)readCommand, 0);
 
   if((status & 0xff) == 5)
   {
@@ -79,11 +77,10 @@ void writeToDevice(swap_t *frame)
   unsigned int asid = frame->sw_asid;
   //grazie all'ASID ottengo il puntatore al device col processo che ha causato il page fault
   dtpreg_t *devReg =(dtpreg_t *) ((memaddr) DEV_REG_ADDR(IL_FLASH, asid-1));
-  //quindi indico in data0 l'indirizzo fisico da copiare nella pagina p del device
-  devReg->data0 = (memaddr) frame;
+  devReg->data0 = (memaddr) swapFrames[frame-swap_pool];
   //indico quale paina deve essere letta e preparo il comando per la read
   int writeCommand = (frame->sw_pageNo << 8) | FLASHWRITE;
-  int status = SYSCALL(DOIO, (int)devReg->command, (int) writeCommand, 0);
+  int status = SYSCALL(DOIO, (int)&(devReg->command), (int) writeCommand, 0);
 
   if((status & 0xff) == 4)
   {
@@ -98,8 +95,7 @@ void pager()
   if(sup != NULL)
   {
     state_t* state = &sup->sup_exceptState[0];
-    unsigned int cause = state->cause;
-    unsigned int excCode = (cause & GETEXECCODE) >> CAUSESHIFT;
+    unsigned int excCode = state->cause & GETEXECCODE;
 
     if(excCode == TLBINVLDMOD)
     {
@@ -134,12 +130,19 @@ void pager()
 
     //la nuova pagina è valida
     page->pte_entryLO = page->pte_entryLO | VALIDON;
-    //update del fi senza variare i flags
-    page->pte_entryLO = (page->pte_entryLO & 0xf) | (fi << 4);
+    unsigned int frameAddr = (unsigned int) swapFrames[fi];
+    page->pte_entryLO = (page->pte_entryLO & 0xFFF) | (frameAddr & 0xFFFFF000);
 
     setENTRYHI(page->pte_entryHI);
-    setENTRYLO(page->pte_entryLO);
-    TLBWI();
+    TLBP();
+    unsigned int newIndex = getINDEX();
+    if (!(newIndex & PRESENTFLAG)) {
+      setENTRYLO(page->pte_entryLO);
+      TLBWI();
+    } else {
+      setENTRYLO(page->pte_entryLO);
+      TLBWR();
+    }
 
     //riabilito gli interrupts, fine azione atomica
     setSTATUS(getSTATUS() | MSTATUS_MIE_MASK);
