@@ -160,8 +160,15 @@ void pager()
 //returns the index of a framed in the swap pool to be swap-in
 int pageReplacement()
 {
-  frameIndex++;
-  return frameIndex % POOLSIZE;
+    //Controllo se è presente un frame libero
+    for(int c = 0; c < POOLSIZE; c++){
+        if(swap_pool[c].sw_asid == -1){
+            return c;
+        }
+    }
+    
+    frameIndex++;
+    return frameIndex % POOLSIZE;
 }
 
 //Rendo disponibili i frame della Swap Pool occupati dal processo terminato 
