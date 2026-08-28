@@ -62,6 +62,13 @@ void ReadTerminalSys(state_t *state, int asid)
     int len = 0;
     while(1)
     {
+        //Controllo che il buffer non superi lo spazio utente
+        if((memaddr)virtAddr>=USERSTACKTOP){
+            //Rilascio il semaforo del terminale prima di terminare il processo
+            SYSCALL(VERHOGEN, (int) &terminalReadSem, 0, 0);
+            TerminateSys(asid);
+            return;
+        }        
         int status = SYSCALL(DOIO, (int) &(termAddr->recv_command), RECEIVECHAR, 0);
         if((status & 0xFF) != OKCHARTRANS)
         {
