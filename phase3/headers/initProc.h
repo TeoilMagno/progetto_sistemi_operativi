@@ -14,6 +14,9 @@ extern int terminalWriteSem;
 extern int terminalReadSem;
 extern support_t supportPool[UPROCMAX];
 
+void deallocateSupport(support_t* sup);
+support_t* allocateSupport(void);
+
 void test();
 
 #endif
