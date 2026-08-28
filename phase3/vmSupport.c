@@ -42,6 +42,7 @@ void readFromDevice(pteEntry_t *page, swap_t *frame, int p)
 
   if((status & 0xff) == 5)
   {
+    SYSCALL(VERHOGEN, (int) &swapPoolSemaphore, 0, 0); //Libero il semaforo della swap pool prima di terminare il processo
     programTrapHandler(asid);
   }
 }
@@ -84,6 +85,7 @@ void writeToDevice(swap_t *frame)
 
   if((status & 0xff) == 4)
   {
+    SYSCALL(VERHOGEN, (int) &swapPoolSemaphore, 0, 0); //Libero il semaforo della swap pool prima di terminare il processo
     programTrapHandler(asid);
   }
 }
@@ -160,4 +162,16 @@ int pageReplacement()
 {
   frameIndex++;
   return frameIndex % POOLSIZE;
+}
+
+//Rendo disponibili i frame della Swap Pool occupati dal processo terminato 
+void freeSwapFrames(int asid){
+    for(int c=0; c < POOLSIZE; c++){ 
+        if(swap_pool[c].sw_asid == asid){ //Controllo se il frame appartiene al processo terminato
+            //Imposto il frame come non occupato            
+            swap_pool[c].sw_asid = -1; 
+            swap_pool[c].sw_pageNo = -1;
+            swap_pool[c].sw_pte = NULL;
+        }
+    }
 }

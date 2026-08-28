@@ -32,6 +32,9 @@ support_t* allocateSupport(){
 
 void test()
 {
+    //Inizializzo le strutture della swap pool
+    initSwapStructs();    
+    
     //Inizializzo supportFree_h: la lista delle Support Structures inattive
     INIT_LIST_HEAD(&supportFree_h);
     

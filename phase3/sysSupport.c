@@ -1,7 +1,13 @@
 #include "./headers/sysSupport.h"
+#include "./headers/vmSupport.h"
 
 void TerminateSys(int asid)
 {
+    SYSCALL(PASSEREN, (int) &swapPoolSemaphore, 0, 0);
+    //rendo disponibili i frame della swap pool del processo terminato
+    freeSwapFrames(asid);
+    SYSCALL(VERHOGEN, (int) &swapPoolSemaphore, 0, 0);
+
     if(asid==SHELL_ASID)
     {
         SYSCALL(VERHOGEN, (int) &masterSemaphore, 0, 0);

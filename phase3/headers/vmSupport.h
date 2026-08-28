@@ -19,5 +19,6 @@ void writeToDevice(swap_t *frame);
 void readFromDevice(pteEntry_t *page, swap_t *frame, int p);
 void pager();
 int pageReplacement();
+void freeSwapFrames(int asid);
 
 #endif
