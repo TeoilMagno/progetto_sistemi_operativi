@@ -42,8 +42,8 @@ void WriteTerminalSys(state_t *state, int asid)
             break;
         }
         written++;
-        if(written==len){state->reg_a0=written;} //Restituisco i caratteri trasmessi se non ci sono errori
     }
+    if(written==len){state->reg_a0=written;} //Restituisco i caratteri trasmessi se non ci sono errori
     SYSCALL(VERHOGEN, (int) &terminalWriteSem, 0, 0);
     state->pc_epc +=4;
     LDST(state);
