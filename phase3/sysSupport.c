@@ -30,6 +30,8 @@ void WriteTerminalSys(state_t *state, int asid)
     }
     SYSCALL(PASSEREN, (int) &terminalWriteSem, 0, 0);
     termreg_t *termAddr = (termreg_t *) DEV_REG_ADDR(IL_TERMINAL, 0);
+    
+    int written = 0; //Contatore dei caratteri trasmessi correttamente     
     for(int i=0; i<len; i++)
     {
         unsigned int cmdValue = (((unsigned int) virtAddr[i])<<8) | TRANSMITCHAR;
@@ -39,7 +41,8 @@ void WriteTerminalSys(state_t *state, int asid)
             state->reg_a0=-status;
             break;
         }
-        if(i==len-1){state->reg_a0=i;}
+        written++;
+        if(written==len){state->reg_a0=written;} //Restituisco i caratteri trasmessi se non ci sono errori
     }
     SYSCALL(VERHOGEN, (int) &terminalWriteSem, 0, 0);
     state->pc_epc +=4;
