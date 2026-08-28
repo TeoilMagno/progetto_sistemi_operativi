@@ -1,4 +1,5 @@
 #include "./headers/initProc.h"
+#include "./headers/vmSupport.h"
 
 swap_t swap_pool[POOLSIZE];
 int swapPoolSemaphore = 1;
