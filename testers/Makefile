@@ -1,7 +1,7 @@
 #$Id: Makefile,v 1.2 2004/05/01 14:53:48 morsiani Exp morsiani $
 # Makefile for mipsel-linux
 #
-XT_PRG_PREFIX = riscv32-unknown-linux-gnu-
+XT_PRG_PREFIX = riscv64-unknown-elf-
 CC = $(XT_PRG_PREFIX)gcc
 LD = $(XT_PRG_PREFIX)ld
 AS = $(XT_PRG_PREFIX)as
@@ -22,8 +22,8 @@ CFLAGS_LANG = -ffreestanding -static -c -nostdlib
 CFLAGS = $(CFLAGS_LANG) -I$(URISCV_INCLUDE_DIR) -Wall -O0 -march=rv32imfd -mabi=ilp32d
 # -Wall
 
-LDAOUTFLAGS = -G 0 -nostdlib -T $(URISCV_DATA_DIR)/uriscvaout.ldscript
-LDCOREFLAGS = -G 0 -nostdlib -T $(URISCV_DATA_DIR)/uriscvcore.ldscript
+LDAOUTFLAGS = -m elf32lriscv -G 0 -nostdlib -T $(URISCV_DATA_DIR)/uriscvaout.ldscript
+LDCOREFLAGS = -m elf32lriscv -G 0 -nostdlib -T $(URISCV_DATA_DIR)/uriscvcore.ldscript
 
 # AS = mipsel-linux-gnu-as -KPIC
 
