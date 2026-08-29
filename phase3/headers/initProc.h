@@ -13,6 +13,7 @@ extern int shellSemaphore;
 extern int terminalWriteSem;
 extern int terminalReadSem;
 extern support_t supportPool[UPROCMAX];
+extern int flashSemaphore[UPROCMAX];
 
 void deallocateSupport(support_t* sup);
 support_t* allocateSupport(void);
