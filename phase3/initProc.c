@@ -9,6 +9,7 @@ int terminalWriteSem = 1;
 int terminalReadSem = 1;
 support_t supportPool[UPROCMAX];
 static struct list_head supportFree_h; //Lista delle Support Structures non ancora assegnate 
+int flashSemaphore[UPROCMAX];
 
 
 void deallocateSupport(support_t* sup){
@@ -70,20 +71,33 @@ void initUProcState(state_t *state, int asid){
 
 void test()
 {
-    //Inizializzo le strutture della swap pool
-    initSwapStructs();    
+    initSwapStructs(); //Inizializzo le strutture della swap pool
     
-    //Inizializzo la lista delle Support Structures libere
-    INIT_LIST_HEAD(&supportFree_h);
+    INIT_LIST_HEAD(&supportFree_h); //Inizializzo la lista delle Support Structures libere
     
     //Aggiungo ogni Support Structures alla lista delle strutture libere  
     for(int i=0; i<UPROCMAX; i++){
+        flashSemaphore[i] = 1;
         deallocateSupport(&supportPool[i]);
     }
 
-    support_t *shellSup=allocateSupport(); //Alloco la Support Structures per lo shell
+    support_t *shellSup=allocateSupport(); //Alloco una Support Structures per lo shell
 
     if(shellSup == NULL){
         PANIC();
     }
+
+    initSupportStructure(shellSup, SHELL_ASID); //Inizializzo Support Structure 
+    
+    /*Inizializzo lo shell*/
+    state_t shellState;
+    initUProcState(&shellState, SHELL_ASID);
+
+    if(SYSCALL(CREATEPROCESS, (int) &shellState, PROCESS_PRIO_LOW, (int) shellSup) == -1){
+            PANIC();
+    }
+
+    SYSCALL(PASSEREN, (int) &masterSemaphore, 0, 0);
+    SYSCALL(TERMPROCESS, 0, 0, 0);
 }
+
