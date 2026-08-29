@@ -1,12 +1,19 @@
 #include "./headers/sysSupport.h"
 #include "./headers/vmSupport.h"
+#include "./headers/initProc.h"
 
 void TerminateSys(int asid)
 {
+    support_t *sup = (support_t *)SYSCALL(GETSUPPORTPTR, 0, 0, 0);
+
     SYSCALL(PASSEREN, (int) &swapPoolSemaphore, 0, 0);
     //rendo disponibili i frame della swap pool del processo terminato
     freeSwapFrames(asid);
     SYSCALL(VERHOGEN, (int) &swapPoolSemaphore, 0, 0);
+    
+    /*La Support Structure torna disponibile*/
+    sup->sup_asid = 0;
+    deallocateSupport(sup);
 
     if(asid==SHELL_ASID)
     {
@@ -93,18 +100,28 @@ void ReadTerminalSys(state_t *state, int asid)
 void ExecuteSys(state_t *state, int asid)
 {
     int newAsid = state->reg_a1;
-    if (asid != SHELL_ASID || newAsid<1 ||newAsid>UPROCMAX) {
+    if (asid != SHELL_ASID || newAsid <= SHELL_ASID ||newAsid>UPROCMAX) {
         TerminateSys(asid);
         return;
     }
+    
+    support_t *newSup = allocateSupport();
+    if(newSup == NULL){
+        state->reg_a0 = -1;
+        state->pc_epc += 4;
+        LDST(state);
+        return;
+    }
+
+    initSupportStructure(newSup, newAsid);
+
     state_t newState;
-    for(int i=0; i<STATE_GPR_LEN; i++){newState.gpr[i]=0;}
-    newState.pc_epc = UPROCSTARTADDR;
-    newState.status = USERPON | IEPON | TEBITON;
-    newState.entry_hi = newAsid << ASIDSHIFT;
-    newState.reg_sp = USERSTACKTOP;
-    if(SYSCALL(CREATEPROCESS, (int) &newState, PROCESS_PRIO_LOW, (int) &supportPool[newAsid-1])==-1)
+    initUProcState(&newState, newAsid);
+
+    if(SYSCALL(CREATEPROCESS, (int) &newState, PROCESS_PRIO_LOW, (int) newSup)==-1)
     {
+        newSup->sup_asid = 0;
+        deallocateSupport(newSup);
         state->reg_a0=-1;
         state->pc_epc+=4;
         LDST(state);
