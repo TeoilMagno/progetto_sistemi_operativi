@@ -17,6 +17,7 @@ extern support_t supportPool[UPROCMAX];
 void deallocateSupport(support_t* sup);
 support_t* allocateSupport(void);
 void initSupportStructure(support_t *sup, int asid);
+void initUProcState(state_t *state, int asid);
 
 void test();
 

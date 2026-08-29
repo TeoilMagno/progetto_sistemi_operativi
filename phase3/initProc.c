@@ -33,13 +33,12 @@ support_t* allocateSupport(){
 
 //Inizializza la Support Structure assegnata a un U-proc
 void initSupportStructure(support_t *sup, int asid){
-    int c;
     sup->sup_asid = asid; //Associo la Support Structure all'U-proc
     
     /*Inizializzo le entry da 0 a 30*/
-    for(c = 0; c < USERPGTBLSIZE-1; c++){
-        sup->sup_privatePgTbl[c].pte_entryHI = ((0x80000 + c) << VPNSHIFT) | (asid << ASIDSHIFT); //La VPN delle pagine è compresa tra 0x80000 e 0x8001E
-        sup->sup_privatePgTbl[c].pte_entryLO = DIRTYON;
+    for(int i = 0; i < USERPGTBLSIZE-1; i++){
+        sup->sup_privatePgTbl[i].pte_entryHI = ((0x80000 + i) << VPNSHIFT) | (asid << ASIDSHIFT); //La VPN delle pagine è compresa tra 0x80000 e 0x8001E
+        sup->sup_privatePgTbl[i].pte_entryLO = DIRTYON;
     }
     
     /*Inizializzo la entry 31*/
@@ -55,6 +54,20 @@ void initSupportStructure(support_t *sup, int asid){
     sup->sup_exceptContext[GENERALEXCEPT].pc = (memaddr)generalExceptionHandler;
 }
 
+//Inizializzazione di U-Proc
+void initUProcState(state_t *state, int asid){
+    /* Azzero i registri generali dello stato iniziale. */
+    for(int i = 0; i < STATE_GPR_LEN; i++){
+        state->gpr[i] = 0;
+    }
+
+    state->pc_epc = UPROCSTARTADDR; //Indirizzo di partenza del programma
+    state->reg_sp = USERSTACKTOP; //Cima dello stack utente 
+    state->status = USERPON | IEPON | IMON | TEBITON; //Imposto user mode, interrupt e local timer abilitati
+    state->mie = MIE_ALL; //Abilito tutte le sorgenti degli interrupt
+    state->entry_hi = asid << ASIDSHIFT; //Imposto l'ASID dell'U-Proc
+}
+
 void test()
 {
     //Inizializzo le strutture della swap pool
@@ -64,11 +77,11 @@ void test()
     INIT_LIST_HEAD(&supportFree_h);
     
     //Aggiungo ogni Support Structures alla lista delle strutture libere  
-    for(int c=0; c<UPROCMAX; c++){
-        deallocateSupport(&supportPool[c]);
+    for(int i=0; i<UPROCMAX; i++){
+        deallocateSupport(&supportPool[i]);
     }
 
-    support_t *shellSup=allocateSupport(); //alloco la Support Structures per lo shell
+    support_t *shellSup=allocateSupport(); //Alloco la Support Structures per lo shell
 
     if(shellSup == NULL){
         PANIC();
