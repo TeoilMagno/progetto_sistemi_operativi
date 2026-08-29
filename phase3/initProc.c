@@ -31,6 +31,30 @@ support_t* allocateSupport(){
     }
 }
 
+//Inizializza la Support Structure assegnata a un U-proc
+void initSupportStructure(support_t *sup, int asid){
+    int c;
+    sup->sup_asid = asid; //Associo la Support Structure all'U-proc
+    
+    /*Inizializzo le entry da 0 a 30*/
+    for(c = 0; c < USERPGTBLSIZE-1; c++){
+        sup->sup_privatePgTbl[c].pte_entryHI = ((0x80000 + c) << VPNSHIFT) | (asid << ASIDSHIFT); //La VPN delle pagine è compresa tra 0x80000 e 0x8001E
+        sup->sup_privatePgTbl[c].pte_entryLO = DIRTYON;
+    }
+    
+    /*Inizializzo la entry 31*/
+    sup->sup_privatePgTbl[USERPGTBLSIZE - 1].pte_entryHI = (STACK_PAGE << VPNSHIFT) | (asid << ASIDSHIFT);
+    sup->sup_privatePgTbl[USERPGTBLSIZE - 1].pte_entryLO = DIRTYON;
+    /*Inizializzazione del Pager per le eccezioni della TLB*/
+    sup->sup_exceptContext[PGFAULTEXCEPT].stackPtr = (memaddr)&sup->sup_stackTLB[499];
+    sup->sup_exceptContext[PGFAULTEXCEPT].status = IEPON | IMON | TEBITON;
+    sup->sup_exceptContext[PGFAULTEXCEPT].pc = (memaddr)pager;
+    /*Inizializzazione del gestore per syscall utente e program trap*/
+    sup->sup_exceptContext[GENERALEXCEPT].stackPtr = (memaddr)&sup->sup_stackGen[499];
+    sup->sup_exceptContext[GENERALEXCEPT].status = IEPON | IMON | TEBITON;
+    sup->sup_exceptContext[GENERALEXCEPT].pc = (memaddr)generalExceptionHandler;
+}
+
 void test()
 {
     //Inizializzo le strutture della swap pool
